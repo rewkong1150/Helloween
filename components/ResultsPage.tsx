@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import type { Costume } from '../types';
 import { Crown, Ghost } from 'lucide-react';
 
+// PodiumItem
 const PodiumItem: React.FC<{ costume: Costume; rank: number; totalVotes: number }> = ({ costume, rank, totalVotes }) => {
   const podiumStyles = [
     { height: 'h-64', color: 'bg-yellow-400', textColor: 'text-yellow-400', borderColor: 'border-yellow-400', emoji: '🥇' },
@@ -30,6 +30,7 @@ const PodiumItem: React.FC<{ costume: Costume; rank: number; totalVotes: number 
   );
 };
 
+// LeaderboardItem
 const LeaderboardItem: React.FC<{ costume: Costume; rank: number; totalVotes: number }> = ({ costume, rank, totalVotes }) => {
   const percentage = totalVotes > 0 ? (costume.voteCount / totalVotes) * 100 : 0;
   return (
@@ -48,10 +49,26 @@ const LeaderboardItem: React.FC<{ costume: Costume; rank: number; totalVotes: nu
   );
 };
 
+// ResultsPage with countdown
 const ResultsPage: React.FC = () => {
   const [costumes, setCostumes] = useState<Costume[]>([]);
   const [loading, setLoading] = useState(true);
+  const [timeLeft, setTimeLeft] = useState<number>(0);
 
+  // Countdown until 17:00 Halloween
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date();
+      const halloween = new Date(now.getFullYear(), 9, 31, 17, 0, 0); // Oct = 9
+      const diff = halloween.getTime() - now.getTime();
+      setTimeLeft(diff > 0 ? diff : 0);
+    };
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Fetch costumes
   useEffect(() => {
     const q = query(collection(db, 'costumes'), orderBy('voteCount', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -68,6 +85,25 @@ const ResultsPage: React.FC = () => {
   const totalVotes = costumes.reduce((sum, costume) => sum + costume.voteCount, 0);
   const topThree = costumes.slice(0, 3);
   const rest = costumes.slice(3);
+
+  const formatTime = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+  };
+
+  if (timeLeft > 0) {
+    return (
+      <div className="text-center py-20">
+        <Ghost className="mx-auto h-24 w-24 text-purple-400 animate-bounce" />
+        <h2 className="text-4xl font-creepster text-yellow-400 mt-4">Results Unlock in:</h2>
+        <p className="mt-4 text-5xl font-bold text-orange-500">{formatTime(timeLeft)}</p>
+        <p className="mt-2 text-lg text-gray-300">Countdown to 5 PM Halloween 🎃</p>
+      </div>
+    );
+  }
 
   if (loading) {
       return <div className="text-center text-2xl font-creepster text-orange-500 animate-pulse">Calculating Winners...</div>;

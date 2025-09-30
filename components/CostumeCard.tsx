@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { Costume } from '../types';
 import { ThumbsUp, Flame, Check } from 'lucide-react';
@@ -23,24 +22,38 @@ const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onVote, isOwnCostume
         </div>
       )}
       <div className="relative w-full h-80 rounded-lg overflow-hidden mb-4">
-        <img
-          src={costume.costumeImage}
-          alt={costume.costumeName}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-        />
+        {costume.mediaType === 'video' ? (
+          <video
+            src={costume.mediaUrl}
+            controls
+            muted
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+          />
+        ) : (
+          <img
+            src={costume.mediaUrl}
+            alt={costume.costumeName}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+          />
+        )}
+
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20"></div>
         <div className="absolute top-2 left-2 flex items-center bg-black/50 p-1.5 rounded-full">
-          <img
-            src={costume.userPhoto}
-            alt={costume.userName}
-            className="w-8 h-8 rounded-full border-2 border-purple-400"
-          />
+          {costume.userPhoto && (
+            <img
+              src={costume.userPhoto}
+              alt={costume.userName}
+              className="w-8 h-8 rounded-full border-2 border-purple-400"
+            />
+          )}
           <span className="text-white text-sm font-semibold ml-2 pr-2">{costume.userName}</span>
         </div>
       </div>
       
       <h3 className="font-creepster text-3xl text-orange-400 truncate">{costume.costumeName}</h3>
-      <p className="text-gray-300 text-sm h-10 overflow-hidden mb-4">{costume.description}</p>
+      {costume.description && (
+        <p className="text-gray-300 text-sm h-10 overflow-hidden mb-4">{costume.description}</p>
+      )}
       
       <div className="flex items-center justify-between">
         <div className="flex items-center text-2xl font-bold text-yellow-400">
