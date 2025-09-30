@@ -229,7 +229,7 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostume, onCostum
 
         {/* Uploader Name */}
         <div className="mb-4">
-          <label htmlFor="uploaderName" className="block text-yellow-400 font-bold mb-2">Uploader Name *</label>
+          <label htmlFor="uploaderName" className="block text-yellow-400 font-bold mb-2">Your Name *</label>
           <input
             type="text"
             id="uploaderName"
