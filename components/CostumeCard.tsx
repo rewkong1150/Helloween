@@ -69,7 +69,7 @@ const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onVote, isOwnCostume
         <div className="flex items-center justify-between">
           <div className="flex items-center text-2xl font-bold text-yellow-400">
             <Flame className="h-6 w-6 mr-2 text-orange-500 animate-pulse" />
-            {costume.voteCount}
+            
           </div>
           <button
             onClick={(e) => {
