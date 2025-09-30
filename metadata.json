@@ -1,0 +1,5 @@
+{
+  "name": "Halloween Costume Contest",
+  "description": "A web application for users to upload their Halloween costumes and vote for their favorite one. Features real-time voting, a leaderboard, and a spooky Halloween theme.",
+  "requestFramePermissions": []
+}
