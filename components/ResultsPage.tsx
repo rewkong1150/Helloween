@@ -99,9 +99,9 @@ const ResultsPage: React.FC = () => {
     return (
       <div className="text-center py-20">
         <Ghost className="mx-auto h-24 w-24 text-purple-400 animate-bounce" />
-        <h2 className="text-4xl font-creepster text-yellow-400 mt-4">ประกาศผลใน:</h2>
+        <h2 className="text-4xl font-creepster text-yellow-400 mt-4">Announcement of results in:</h2>
         <p className="mt-4 text-5xl font-bold text-orange-500">{formatTime(timeLeft)}</p>
-        <p className="mt-2 text-lg text-gray-300">3 พฤศจิกายน 2025 เวลา 17:00 น. 🎃</p>
+        <p className="mt-2 text-lg text-gray-300">November 3, 2025 at 5:00 PM 🎃</p>
       </div>
     );
   }
