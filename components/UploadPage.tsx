@@ -80,8 +80,8 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostume, onCostum
   const [uploadStatus, setUploadStatus] = useState<'before' | 'during' | 'after'>('before');
 
   // กำหนดช่วงเวลา (ใช้ปี 2024)
-  const UPLOAD_START = new Date('2024-10-31T00:00:00+07:00');
-  const UPLOAD_END = new Date('2024-11-02T23:59:59+07:00');
+const UPLOAD_START = new Date('2025-10-31T00:00:00+07:00');
+const UPLOAD_END = new Date('2025-11-02T23:59:59+07:00');
 
   useEffect(() => {
     if (existingCostume) {
@@ -134,33 +134,32 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostume, onCostum
     }
   };
 
-  const getTimeMessage = () => {
-    const now = new Date();
-    
-    if (now < UPLOAD_START) {
-      return {
-        type: 'info' as const,
-        title: 'ยังไม่ถึงเวลาอัปโหลด / Upload Time Not Started',
-        message: `สามารถอัปโหลดได้ตั้งแต่ 31 ตุลาคม 00:00 น. ถึง 2 พฤศจิกายน 23:59 น. / Upload opens from Oct 31 00:00 to Nov 2 23:59`,
-        error: "ยังไม่ถึงเวลาอัปโหลด / Upload time hasn't started yet"
-      };
-    } else if (now > UPLOAD_END) {
-      return {
-        type: 'error' as const,
-        title: 'หมดเวลาอัปโหลดแล้ว / Upload Time Has Ended',
-        message: `เวลาอัปโหลดสิ้นสุดลงแล้ว (2 พฤศจิกายน 23:59 น.) / Upload time has ended (Nov 2 23:59)`,
-        error: "หมดเวลาอัปโหลดแล้ว / Upload time has ended"
-      };
-    } else {
-      return {
-        type: 'success' as const,
-        title: 'กำลังเปิดรับอัปโหลด! / Upload Time is Open!',
-        message: `อัปโหลดได้จนถึง 2 พฤศจิกายน 23:59 น. / Upload until Nov 2 23:59`,
-        error: ""
-      };
-    }
-  };
-
+ const getTimeMessage = () => {
+  const now = new Date();
+  
+  if (now < UPLOAD_START) {
+    return {
+      type: 'info' as const,
+      title: 'ยังไม่ถึงเวลาอัปโหลด / Upload Time Not Started',
+      message: `สามารถอัปโหลดได้ตั้งแต่ 31 ตุลาคม 2025 00:00 น. ถึง 2 พฤศจิกายน 2025 23:59 น. / Upload opens from Oct 31, 2025 00:00 to Nov 2, 2025 23:59`,
+      error: "ยังไม่ถึงเวลาอัปโหลด / Upload time hasn't started yet"
+    };
+  } else if (now > UPLOAD_END) {
+    return {
+      type: 'error' as const,
+      title: 'หมดเวลาอัปโหลดแล้ว / Upload Time Has Ended',
+      message: `เวลาอัปโหลดสิ้นสุดลงแล้ว (2 พฤศจิกายน 2025 23:59 น.) / Upload time has ended (Nov 2, 2025 23:59)`,
+      error: "หมดเวลาอัปโหลดแล้ว / Upload time has ended"
+    };
+  } else {
+    return {
+      type: 'success' as const,
+      title: 'กำลังเปิดรับอัปโหลด! / Upload Time is Open!',
+      message: `อัปโหลดได้จนถึง 2 พฤศจิกายน 2025 23:59 น. / Upload until Nov 2, 2025 23:59`,
+      error: ""
+    };
+  }
+};
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
