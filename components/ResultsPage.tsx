@@ -55,12 +55,12 @@ const ResultsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState<number>(0);
 
-  // Countdown until 17:00 Halloween
+  // Countdown until November 3, 2025 at 17:00
   useEffect(() => {
     const updateCountdown = () => {
       const now = new Date();
-      const halloween = new Date(now.getFullYear(), 9, 31, 17, 0, 0); // Oct = 9
-      const diff = halloween.getTime() - now.getTime();
+      const resultDate = new Date(2025, 10, 3, 17, 0, 0); // Nov 3, 2025 at 5:00 PM (Nov = 10)
+      const diff = resultDate.getTime() - now.getTime();
       setTimeLeft(diff > 0 ? diff : 0);
     };
     updateCountdown();
@@ -88,33 +88,34 @@ const ResultsPage: React.FC = () => {
 
   const formatTime = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
-    return `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+    return `${days} วัน ${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
   };
 
   if (timeLeft > 0) {
     return (
       <div className="text-center py-20">
         <Ghost className="mx-auto h-24 w-24 text-purple-400 animate-bounce" />
-        <h2 className="text-4xl font-creepster text-yellow-400 mt-4">Results Unlock in:</h2>
+        <h2 className="text-4xl font-creepster text-yellow-400 mt-4">ประกาศผลใน:</h2>
         <p className="mt-4 text-5xl font-bold text-orange-500">{formatTime(timeLeft)}</p>
-        <p className="mt-2 text-lg text-gray-300">Countdown to 5 PM Halloween 🎃</p>
+        <p className="mt-2 text-lg text-gray-300">3 พฤศจิกายน 2025 เวลา 17:00 น. 🎃</p>
       </div>
     );
   }
 
   if (loading) {
-      return <div className="text-center text-2xl font-creepster text-orange-500 animate-pulse">Calculating Winners...</div>;
+      return <div className="text-center text-2xl font-creepster text-orange-500 animate-pulse">กำลังคำนวณผลการแข่งขัน...</div>;
   }
   
   if (costumes.length === 0) {
     return (
         <div className="text-center py-20">
             <Ghost className="mx-auto h-24 w-24 text-purple-400" />
-            <h2 className="text-4xl font-creepster text-yellow-400 mt-4">The Results are Ghostly Quiet</h2>
-            <p className="mt-4 text-lg text-gray-300">No votes have been cast yet. Head to the gallery to pick your favorite!</p>
+            <h2 className="text-4xl font-creepster text-yellow-400 mt-4">ยังไม่มีผลโหวต</h2>
+            <p className="mt-4 text-lg text-gray-300">ยังไม่มีผู้โหวตเลย ไปที่แกลเลอรี่เพื่อเลือกคอสตูมที่คุณชอบ!</p>
         </div>
     )
   }
