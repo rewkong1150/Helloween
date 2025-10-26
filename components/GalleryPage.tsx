@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from 'firebase/auth';
 import {
@@ -39,6 +38,27 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
   const [costumes, setCostumes] = useState<Costume[]>([]);
   const [userVote, setUserVote] = useState<Vote | null>(null);
   const [loading, setLoading] = useState(true);
+  const [canVote, setCanVote] = useState(false);
+
+  // ฟังก์ชันตรวจสอบว่าเป็นช่วงเวลาโหวตหรือไม่
+  const checkVotingPeriod = useCallback(() => {
+    const now = new Date();
+    const voteStart = new Date('2025-11-03T13:00:00+07:00'); // 13:00 GMT+7
+    const voteEnd = new Date('2025-11-03T16:00:00+07:00'); // 16:00 GMT+7
+    
+    return now >= voteStart && now <= voteEnd;
+  }, []);
+
+  useEffect(() => {
+    setCanVote(checkVotingPeriod());
+    
+    // อัพเดทสถานะทุกนาที
+    const interval = setInterval(() => {
+      setCanVote(checkVotingPeriod());
+    }, 60000);
+    
+    return () => clearInterval(interval);
+  }, [checkVotingPeriod]);
 
   useEffect(() => {
     const q = query(collection(db, 'costumes'), orderBy('uploadedAt', 'desc'));
@@ -69,6 +89,21 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
 
   const handleVote = useCallback(async (targetUserId: string) => {
     if (!currentUser) return;
+    
+    // ตรวจสอบช่วงเวลาโหวต
+    if (!canVote) {
+      const voteStart = new Date('2025-11-03T13:00:00+07:00');
+      const voteEnd = new Date('2025-11-03T16:00:00+07:00');
+      
+      const now = new Date();
+      if (now < voteStart) {
+        toast.error("Voting will start on November 3, 2025 at 13:00! 🎃");
+      } else if (now > voteEnd) {
+        toast.error("Voting period has ended! Thank you for participating! 👻");
+      }
+      return;
+    }
+
     const currentUserId = currentUser.uid;
 
     if (currentUserId === targetUserId) {
@@ -78,8 +113,8 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
     
     // Optimistic UI update
     const previousVote = userVote;
-    const newVote = { voterId: currentUserId, votedFor: targetUserId, votedAt: serverTimestamp() }; // serverTimestamp is an object
-    setUserVote(newVote as Vote); // Temporarily cast for UI state
+    const newVote = { voterId: currentUserId, votedFor: targetUserId, votedAt: serverTimestamp() };
+    setUserVote(newVote as Vote);
     
     try {
         const voteRef = doc(db, 'votes', currentUserId);
@@ -112,7 +147,43 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
         // Revert optimistic update on error
         setUserVote(previousVote);
     }
-  }, [currentUser, userVote]);
+  }, [currentUser, userVote, canVote]);
+
+  // แสดงสถานะเวลาโหวต
+  const VotingStatus = () => {
+    const now = new Date();
+    const voteStart = new Date('2025-11-03T13:00:00+07:00');
+    const voteEnd = new Date('2025-11-03T16:00:00+07:00');
+    
+    if (now < voteStart) {
+      return (
+        <div className="text-center mb-8 p-4 bg-blue-900/50 rounded-lg border border-blue-700">
+          <h3 className="text-xl font-creepster text-blue-400">Voting Starts Soon!</h3>
+          <p className="text-gray-300 mt-2">
+            Voting will begin on November 3, 2025 from 13:00 - 16:00
+          </p>
+        </div>
+      );
+    } else if (now > voteEnd) {
+      return (
+        <div className="text-center mb-8 p-4 bg-purple-900/50 rounded-lg border border-purple-700">
+          <h3 className="text-xl font-creepster text-purple-400">Voting Has Ended!</h3>
+          <p className="text-gray-300 mt-2">
+            Thank you for participating in the costume contest! 🎉
+          </p>
+        </div>
+      );
+    } else {
+      return (
+        <div className="text-center mb-8 p-4 bg-green-900/50 rounded-lg border border-green-700">
+          <h3 className="text-xl font-creepster text-green-400">Voting is Live! 🎃</h3>
+          <p className="text-gray-300 mt-2">
+            Cast your vote now! Voting ends at 16:00
+          </p>
+        </div>
+      );
+    }
+  };
   
   if (loading) {
     return (
@@ -132,16 +203,20 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {costumes.map((costume) => (
-        <CostumeCard
-          key={costume.id}
-          costume={costume}
-          onVote={handleVote}
-          isOwnCostume={currentUser.uid === costume.userId}
-          isVotedFor={userVote?.votedFor === costume.userId}
-        />
-      ))}
+    <div>
+      <VotingStatus />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {costumes.map((costume) => (
+          <CostumeCard
+            key={costume.id}
+            costume={costume}
+            onVote={handleVote}
+            isOwnCostume={currentUser.uid === costume.userId}
+            isVotedFor={userVote?.votedFor === costume.userId}
+            canVote={canVote}
+          />
+        ))}
+      </div>
     </div>
   );
 };
