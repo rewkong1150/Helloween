@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { Costume } from '../types';
 import { getCategoryInfo } from '../config';
-import { ThumbsUp, Flame, Check, X } from 'lucide-react';
+import { ThumbsUp, Flame, Check, X, Play } from 'lucide-react';
 
 interface CostumeCardProps {
   costume: Costume;
@@ -31,19 +31,29 @@ const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onVote, isOwnCostume
           </div>
         )}
         <div className="relative w-full h-80 rounded-lg overflow-hidden mb-4">
-          {costume.mediaType === 'video' ? (
+          {/* The list shows the small thumbnail; the full file loads only in the viewer below. */}
+          {costume.mediaType === 'video' && !costume.thumbUrl ? (
             <video
               src={costume.mediaUrl}
-              controls
+              preload="metadata"
               muted
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
             />
           ) : (
             <img
-              src={costume.mediaUrl}
+              src={costume.thumbUrl ?? costume.mediaUrl}
               alt={costume.costumeName}
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
             />
+          )}
+          {costume.mediaType === 'video' && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <span className="rounded-full bg-black/60 border border-orange-400/70 p-4">
+                <Play className="h-8 w-8 text-orange-300" fill="currentColor" />
+              </span>
+            </div>
           )}
 
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20"></div>
@@ -51,6 +61,7 @@ const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onVote, isOwnCostume
             {costume.userPhoto && (
               <img
                 src={costume.userPhoto}
+                referrerPolicy="no-referrer"
                 alt={costume.userName}
                 className="w-8 h-8 rounded-full border-2 border-purple-400"
               />
@@ -116,7 +127,7 @@ const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onVote, isOwnCostume
             </button>
             <div className="w-full h-auto mb-4">
               {costume.mediaType === 'video' ? (
-                <video src={costume.mediaUrl} controls autoPlay className="w-full max-h-[80vh] rounded-lg" />
+                <video src={costume.mediaUrl} controls autoPlay preload="metadata" className="w-full max-h-[80vh] rounded-lg" />
               ) : (
                 <img src={costume.mediaUrl} alt={costume.costumeName} className="w-full max-h-[80vh] object-contain rounded-lg" />
               )}

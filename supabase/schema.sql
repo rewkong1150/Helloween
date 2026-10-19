@@ -30,6 +30,8 @@ create table public.entries (
   media_url     text not null,
   media_path    text not null,
   media_type    text not null check (media_type in ('image', 'video')),
+  thumb_url     text,
+  thumb_path    text,
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now(),
   unique (user_id, category)            -- one entry per person per category
@@ -89,8 +91,8 @@ grant  execute on function public.get_results()   to authenticated;
 
 -- ----------------------------------------------------------------- storage
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('entries', 'entries', true, 52428800, array['image/*', 'video/*'])
-on conflict (id) do update set public = true, file_size_limit = 52428800,
+values ('entries', 'entries', true, 20971520, array['image/*', 'video/*'])
+on conflict (id) do update set public = true, file_size_limit = 20971520,
   allowed_mime_types = array['image/*', 'video/*'];
 
 drop policy if exists entries_files_insert on storage.objects;

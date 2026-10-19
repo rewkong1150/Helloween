@@ -17,6 +17,9 @@ export interface Costume {
   // Path inside the storage bucket, used to delete the file.
   mediaPath: string;
   mediaType: 'image' | 'video';
+  // Small JPEG for lists (a still frame for videos). Missing on older entries or if it could not be made.
+  thumbUrl?: string | null;
+  thumbPath?: string | null;
   costumeName: string;
   position: string;
   description: string;

@@ -59,13 +59,59 @@ const compressImage = (file: File, maxSizeMB = 1): Promise<Blob> => {
               );
             }
           },
-          'image/jpeg'
+          'image/jpeg',
+          0.82
         );
       };
     };
     reader.onerror = error => reject(error);
   });
 };
+
+// Videos are stored as-is, so keep them small (the storage bucket enforces the same limit).
+const MAX_VIDEO_MB = 20;
+const MAX_IMAGE_INPUT_MB = 50;
+const THUMB_MAX = 480;
+
+const canvasToJpeg = (source: CanvasImageSource, w: number, h: number, maxDim: number, quality: number): Promise<Blob | null> => {
+  const scale = Math.min(1, maxDim / Math.max(w, h));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(w * scale));
+  canvas.height = Math.max(1, Math.round(h * scale));
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return Promise.resolve(null);
+  ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+  return new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/jpeg', quality));
+};
+
+// Small JPEG used by the gallery. For videos it is a still frame, so the gallery never downloads clips.
+// Resolves to null if the browser cannot decode the file (the gallery then falls back to the original).
+const makeThumbnail = (file: File): Promise<Blob | null> =>
+  new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const done = (blob: Blob | null) => {
+      URL.revokeObjectURL(url);
+      resolve(blob);
+    };
+    setTimeout(() => done(null), 10000);
+    if (file.type.startsWith('image/')) {
+      const img = new Image();
+      img.onload = () => canvasToJpeg(img, img.naturalWidth, img.naturalHeight, THUMB_MAX, 0.7).then(done);
+      img.onerror = () => done(null);
+      img.src = url;
+    } else {
+      const video = document.createElement('video');
+      video.muted = true;
+      video.playsInline = true;
+      video.preload = 'auto';
+      video.onloadeddata = () => {
+        video.currentTime = Math.min(0.5, (video.duration || 1) / 2);
+      };
+      video.onseeked = () => canvasToJpeg(video, video.videoWidth, video.videoHeight, THUMB_MAX, 0.7).then(done);
+      video.onerror = () => done(null);
+      video.src = url;
+    }
+  });
 
 const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostumeUpdate }) => {
   const [category, setCategory] = useState<Category>('costume');
@@ -116,9 +162,13 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostu
 
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      // ตรวจสอบขนาดไฟล์ (50MB)
-      if (selectedFile.size > 50 * 1024 * 1024) {
-        toast.error("ไฟล์มีขนาดใหญ่เกิน 50MB / File size exceeds 50MB");
+      // ตรวจสอบขนาดไฟล์: รูปถูกย่ออัตโนมัติ, วิดีโอจำกัด 20MB
+      const isVideo = selectedFile.type.startsWith('video/');
+      const limitMB = isVideo ? MAX_VIDEO_MB : MAX_IMAGE_INPUT_MB;
+      if (selectedFile.size > limitMB * 1024 * 1024) {
+        toast.error(isVideo
+          ? `วิดีโอใหญ่เกิน ${MAX_VIDEO_MB}MB / Video exceeds ${MAX_VIDEO_MB}MB`
+          : `รูปใหญ่เกิน ${MAX_IMAGE_INPUT_MB}MB / Image exceeds ${MAX_IMAGE_INPUT_MB}MB`);
         return;
       }
       
@@ -197,6 +247,8 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostu
       let mediaUrl = existingCostume?.mediaUrl || '';
       let mediaPath = existingCostume?.mediaPath || '';
       let mediaType: 'image' | 'video' = existingCostume?.mediaType || 'image';
+      let thumbUrl = existingCostume?.thumbUrl || null;
+      let thumbPath = existingCostume?.thumbPath || null;
 
       // อัปโหลดไฟล์ใหม่ถ้ามี
       if (file) {
@@ -204,22 +256,40 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostu
           ? await compressImage(file)
           : file;
 
-        const fileExtension = (file.name.split('.').pop() || 'bin').toLowerCase();
-        const newPath = `${user.uid}/${category}_${Date.now()}.${fileExtension}`;
+        const stamp = Date.now();
+        // Photos are re-encoded as JPEG above, so name them accordingly.
+        const fileExtension = file.type.startsWith('image/') ? 'jpg' : (file.name.split('.').pop() || 'bin').toLowerCase();
+        const newPath = `${user.uid}/${category}_${stamp}.${fileExtension}`;
+        // File names are unique per upload, so they can be cached for a year (saves download quota).
         const { error: uploadError } = await supabase.storage
           .from(MEDIA_BUCKET)
-          .upload(newPath, uploadFile, { contentType: uploadFile.type || file.type });
+          .upload(newPath, uploadFile, { contentType: uploadFile.type || file.type, cacheControl: '31536000' });
         if (uploadError) throw uploadError;
 
+        // รูปย่อสำหรับหน้าแกลเลอรี (ถ้าสร้างไม่ได้ จะใช้ไฟล์จริงแทน)
+        let newThumbPath: string | null = null;
+        const thumb = await makeThumbnail(file);
+        if (thumb) {
+          const path = `${user.uid}/${category}_${stamp}_thumb.jpg`;
+          const { error: thumbError } = await supabase.storage
+            .from(MEDIA_BUCKET)
+            .upload(path, thumb, { contentType: 'image/jpeg', cacheControl: '31536000' });
+          if (thumbError) console.warn('Could not upload the thumbnail:', thumbError);
+          else newThumbPath = path;
+        }
+
         // ลบไฟล์เก่าหลังอัปโหลดใหม่สำเร็จ
-        if (existingCostume?.mediaPath) {
-          const { error: removeError } = await supabase.storage.from(MEDIA_BUCKET).remove([existingCostume.mediaPath]);
-          if (removeError) console.warn('Could not remove the old file:', removeError);
+        const oldPaths = [existingCostume?.mediaPath, existingCostume?.thumbPath].filter((x): x is string => !!x);
+        if (oldPaths.length) {
+          const { error: removeError } = await supabase.storage.from(MEDIA_BUCKET).remove(oldPaths);
+          if (removeError) console.warn('Could not remove the old files:', removeError);
         }
 
         mediaPath = newPath;
         mediaUrl = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(newPath).data.publicUrl;
         mediaType = file.type.startsWith("video/") ? "video" : "image";
+        thumbPath = newThumbPath;
+        thumbUrl = newThumbPath ? supabase.storage.from(MEDIA_BUCKET).getPublicUrl(newThumbPath).data.publicUrl : null;
       }
 
       const { data, error } = await supabase
@@ -237,6 +307,8 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostu
             media_url: mediaUrl,
             media_path: mediaPath,
             media_type: mediaType,
+            thumb_url: thumbUrl,
+            thumb_path: thumbPath,
             updated_at: new Date().toISOString(),
           },
           { onConflict: 'user_id,category' }
@@ -273,9 +345,10 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostu
       // ลบข้อมูลก่อน แล้วค่อยลบไฟล์จาก storage
       const { error } = await supabase.from('entries').delete().eq('id', existingCostume.id);
       if (error) throw error;
-      if (existingCostume.mediaPath) {
-        const { error: removeError } = await supabase.storage.from(MEDIA_BUCKET).remove([existingCostume.mediaPath]);
-        if (removeError) console.warn('Could not remove the file:', removeError);
+      const paths = [existingCostume.mediaPath, existingCostume.thumbPath].filter((x): x is string => !!x);
+      if (paths.length) {
+        const { error: removeError } = await supabase.storage.from(MEDIA_BUCKET).remove(paths);
+        if (removeError) console.warn('Could not remove the files:', removeError);
       }
       onCostumeUpdate(category, null);
 
@@ -414,7 +487,7 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostu
                     </label>
                     <p className="pl-1">or drag and drop</p>
                   </div>
-                  <p className="text-xs text-gray-500">PNG, JPG, GIF, MP4 up to 50MB</p>
+                  <p className="text-xs text-gray-500">Photos (auto-resized) up to 50MB · Videos up to {MAX_VIDEO_MB}MB</p>
                 </>
               )}
             </div>

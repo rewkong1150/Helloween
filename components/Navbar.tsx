@@ -69,6 +69,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, navigate, currentPage }) => {
             <div className="flex items-center">
               <img
                 src={user.photoURL || `https://picsum.photos/seed/${user.uid}/40`}
+                referrerPolicy="no-referrer"
                 alt={user.displayName || 'User'}
                 className="h-9 w-9 rounded-full border-2 border-orange-500"
               />

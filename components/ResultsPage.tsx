@@ -6,10 +6,10 @@ import { CATEGORIES, getCategoryInfo, RESULTS_AT } from '../config';
 import { Crown, Ghost } from 'lucide-react';
 
 const Media: React.FC<{ costume: Costume; className: string }> = ({ costume, className }) =>
-  costume.mediaType === 'video' ? (
-    <video src={costume.mediaUrl} muted className={className} />
+  costume.mediaType === 'video' && !costume.thumbUrl ? (
+    <video src={costume.mediaUrl} preload="metadata" muted className={className} />
   ) : (
-    <img src={costume.mediaUrl} alt={costume.costumeName} className={className} />
+    <img src={costume.thumbUrl ?? costume.mediaUrl} alt={costume.costumeName} loading="lazy" decoding="async" className={className} />
   );
 
 // PodiumItem

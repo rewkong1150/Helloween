@@ -15,6 +15,8 @@ export interface EntryRow {
   media_url: string;
   media_path: string;
   media_type: 'image' | 'video';
+  thumb_url: string | null;
+  thumb_path: string | null;
   created_at: string;
 }
 
@@ -27,6 +29,8 @@ export const rowToCostume = (row: EntryRow, voteCount?: number): Costume => ({
   mediaUrl: row.media_url,
   mediaPath: row.media_path,
   mediaType: row.media_type,
+  thumbUrl: row.thumb_url,
+  thumbPath: row.thumb_path,
   costumeName: row.name,
   position: row.position ?? '',
   description: row.description,
