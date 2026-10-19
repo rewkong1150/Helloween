@@ -115,7 +115,7 @@ const ResultsPage: React.FC = () => {
     return (
       <div className="text-center py-20">
         <Ghost className="mx-auto h-24 w-24 text-purple-400 animate-bounce" />
-        <h2 className="text-4xl font-creepster text-yellow-400 mt-4">Announcement of results in:</h2>
+        <h2 className="text-4xl font-display text-yellow-400 mt-4">Announcement of results in:</h2>
         <p className="mt-4 text-5xl font-bold text-orange-500">{formatTime(timeLeft)}</p>
         <p className="mt-2 text-lg text-gray-300">Results will be announced after voting closes on October 30, 2026 🎃</p>
       </div>
@@ -123,7 +123,7 @@ const ResultsPage: React.FC = () => {
   }
 
   if (loading) {
-      return <div className="text-center text-2xl font-creepster text-orange-500 animate-pulse">กำลังคำนวณผลการแข่งขัน...</div>;
+      return <div className="text-center text-2xl font-display text-orange-500 animate-pulse">กำลังคำนวณผลการแข่งขัน...</div>;
   }
 
   const inCategory = costumes.filter((c) => c.category === category);
@@ -134,7 +134,7 @@ const ResultsPage: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="font-creepster text-6xl text-center text-orange-500 mb-8 flex items-center justify-center gap-4">
+      <h1 className="font-display text-6xl text-center text-orange-500 mb-8 flex items-center justify-center gap-4">
         <Crown className="w-12 h-12 text-yellow-400"/>
         Hall of Fame
         <Crown className="w-12 h-12 text-yellow-400"/>
@@ -159,7 +159,7 @@ const ResultsPage: React.FC = () => {
       {inCategory.length === 0 ? (
         <div className="text-center py-20">
           <Ghost className="mx-auto h-24 w-24 text-purple-400" />
-          <h2 className="text-4xl font-creepster text-yellow-400 mt-4">ยังไม่มีผลโหวต</h2>
+          <h2 className="text-4xl font-display text-yellow-400 mt-4">ยังไม่มีผลโหวต</h2>
           <p className="mt-4 text-lg text-gray-300">ยังไม่มีผลงานในหมวด “{categoryInfo.labelTh}”</p>
         </div>
       ) : (

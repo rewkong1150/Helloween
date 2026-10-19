@@ -58,7 +58,7 @@ const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onVote, isOwnCostume
         </div>
 
         <p className="text-xs text-purple-300 mb-1">{categoryInfo.emoji} {categoryInfo.label}</p>
-        <h3 className="font-creepster text-3xl text-orange-400 truncate">{costume.costumeName}</h3>
+        <h3 className="font-display text-3xl text-orange-400 truncate">{costume.costumeName}</h3>
         {costume.position && (
           <p className="text-yellow-400 font-semibold text-sm mb-1">Position: {costume.position}</p>
         )}
@@ -120,7 +120,7 @@ const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onVote, isOwnCostume
               )}
             </div>
             <div className="text-white space-y-1">
-              <h2 className="font-creepster text-2xl text-orange-400">{costume.costumeName}</h2>
+              <h2 className="font-display text-2xl text-orange-400">{costume.costumeName}</h2>
               {costume.position && <p>Position: {costume.position}</p>}
               {costume.uploaderName && <p>Uploader: {costume.uploaderName}</p>}
               {costume.description && <p>Description: {costume.description}</p>}

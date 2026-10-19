@@ -42,11 +42,11 @@ const LoginPage: React.FC = () => {
       <div className="absolute inset-0 bg-gradient-to-b from-orange-900 via-purple-900 to-black"></div>
 
       <div className="z-10 text-center bg-black/50 backdrop-blur-sm p-8 md:p-12 rounded-2xl border border-purple-500/50 shadow-2xl shadow-purple-500/20">
-        <h1 className="font-creepster text-5xl md:text-7xl text-orange-500 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] mb-2">
-          Halloween Challenge
+        <h1 className="font-display text-4xl md:text-6xl text-orange-400 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] mb-3 leading-tight">
+          Halloween Challenge <span className="block text-yellow-400 text-3xl md:text-5xl mt-1">2026</span>
         </h1>
-        <p className="text-yellow-400 text-lg md:text-2xl mb-8 animate-pulse">
-          🎃 Costumes · Decorations · Pets 👻
+        <p className="text-yellow-400 text-lg md:text-xl mb-2">
+          🕯️ Costumes · Decorations · Pets 🦇
         </p>
         <button
           onClick={handleGoogleLogin}

@@ -27,7 +27,7 @@ const FloatingGhosts: React.FC = () => {
           animation: drift linear infinite;
         }
       `}</style>
-      {[...Array(5)].map((_, i) => (
+      {['🦇', '👻', '🕯️', '🦇', '🕸️', '🦇'].map((emoji, i) => (
         <div 
           key={i} 
           className="ghost-container" 
@@ -37,7 +37,7 @@ const FloatingGhosts: React.FC = () => {
             animationDelay: `${Math.random() * 10}s`,
           }}
         >
-          <span className="ghost" style={{ animationDelay: `${Math.random() * 5}s` }}>👻</span>
+          <span className="ghost" style={{ animationDelay: `${Math.random() * 5}s` }}>{emoji}</span>
         </div>
       ))}
     </div>

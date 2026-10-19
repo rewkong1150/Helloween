@@ -74,7 +74,7 @@ const App: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="font-creepster text-5xl text-orange-500 animate-pulse">Loading... 🎃</div>
+        <div className="font-display text-5xl text-orange-500 animate-pulse">Loading... 🕯️</div>
       </div>
     );
   }

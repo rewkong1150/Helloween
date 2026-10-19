@@ -299,14 +299,14 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostu
 
   return (
     <div className="max-w-2xl mx-auto bg-black/50 backdrop-blur-md p-8 rounded-2xl border border-purple-500/50 shadow-lg shadow-purple-500/20">
-      <h2 className="font-creepster text-5xl text-center text-orange-500 mb-6">
+      <h2 className="font-display text-5xl text-center text-orange-500 mb-6">
         {existingCostume ? 'Edit Your Masterpiece' : 'Unveil Your Entry'}
       </h2>
       
       {/* Time Status Banner */}
       <div className={`mb-6 p-4 rounded-lg border ${
         timeMessage.type === 'info' 
-          ? 'bg-blue-500/20 border-blue-500/50' 
+          ? 'bg-orange-500/15 border-orange-500/40' 
           : timeMessage.type === 'success'
           ? 'bg-green-500/20 border-green-500/50'
           : 'bg-red-500/20 border-red-500/50'

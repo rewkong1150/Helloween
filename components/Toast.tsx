@@ -37,14 +37,14 @@ const Toast: React.FC<{ message: ToastMessage; onDismiss: (id: number) => void }
   const icons = {
     success: <CheckCircle className="text-green-300" />,
     error: <XCircle className="text-red-300" />,
-    info: <Info className="text-blue-300" />,
+    info: <Info className="text-orange-300" />,
     warning: <TriangleAlert className="text-yellow-300" />,
   };
 
   const bgColors = {
     success: 'bg-green-800/80 border-green-500/50',
     error: 'bg-red-800/80 border-red-500/50',
-    info: 'bg-blue-800/80 border-blue-500/50',
+    info: 'bg-orange-800/80 border-orange-500/50',
     warning: 'bg-yellow-800/80 border-yellow-500/50',
   };
 

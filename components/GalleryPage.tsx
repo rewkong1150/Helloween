@@ -126,8 +126,8 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
 
     if (now < VOTE_START) {
       return (
-        <div className="text-center mb-8 p-4 bg-blue-900/50 rounded-lg border border-blue-700">
-          <h3 className="text-xl font-creepster text-blue-400">Voting Starts Soon!</h3>
+        <div className="text-center mb-8 p-4 bg-orange-900/40 rounded-lg border border-orange-700">
+          <h3 className="text-xl font-display text-orange-400">Voting Starts Soon!</h3>
           <p className="text-gray-300 mt-2">
             Voting opens on October 30, 2026 — one vote in each of the 3 categories 🏆
           </p>
@@ -136,7 +136,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
     } else if (now > VOTE_END) {
       return (
         <div className="text-center mb-8 p-4 bg-purple-900/50 rounded-lg border border-purple-700">
-          <h3 className="text-xl font-creepster text-purple-400">Voting Has Ended!</h3>
+          <h3 className="text-xl font-display text-purple-400">Voting Has Ended!</h3>
           <p className="text-gray-300 mt-2">
             Thank you for participating in the Halloween Challenge! 🎉
           </p>
@@ -145,7 +145,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
     }
     return (
       <div className="text-center mb-8 p-4 bg-green-900/50 rounded-lg border border-green-700">
-        <h3 className="text-xl font-creepster text-green-400">Voting is Live! 🎃</h3>
+        <h3 className="text-xl font-display text-green-400">Voting is Live! 🎃</h3>
         <p className="text-gray-300 mt-2">
           Cast your vote now — one vote per category! Voting ends October 30 at 23:59
         </p>
@@ -189,7 +189,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
 
       {visibleCostumes.length === 0 ? (
         <div className="text-center py-20">
-          <h2 className="text-4xl font-creepster text-yellow-400">The Crypt is Empty!</h2>
+          <h2 className="text-4xl font-display text-yellow-400">The Crypt is Empty!</h2>
           <p className="mt-4 text-lg text-gray-300">
             No entries in “{categoryInfo.label}” yet. {categoryInfo.description}
           </p>

@@ -50,7 +50,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, navigate, currentPage }) => {
             onClick={() => navigate('gallery')}
           >
             <Ghost className="h-8 w-8 text-orange-500 animate-pulse" />
-            <span className="font-creepster text-2xl ml-2 text-orange-400 hidden sm:block">Costume Contest</span>
+            <span className="font-display text-2xl ml-2 text-orange-400 hidden sm:block">Halloween Challenge</span>
           </div>
           
           <div className="flex items-center space-x-2 sm:space-x-4">
