@@ -8,9 +8,11 @@ interface CostumeCardProps {
   onVote: (costume: Costume) => void;
   isOwnCostume: boolean;
   isVotedFor: boolean;
+  // The user already voted for another entry in this category (so voting here changes their vote).
+  hasVotedInCategory?: boolean;
 }
 
-const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onVote, isOwnCostume, isVotedFor }) => {
+const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onVote, isOwnCostume, isVotedFor, hasVotedInCategory }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const categoryInfo = getCategoryInfo(costume.category);
 
@@ -95,7 +97,7 @@ const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onVote, isOwnCostume
               </>
             ) : (
               <>
-                <ThumbsUp className="mr-2 h-5 w-5" /> Vote
+                <ThumbsUp className="mr-2 h-5 w-5" /> {hasVotedInCategory ? 'Change vote' : 'Vote'}
               </>
             )}
           </button>

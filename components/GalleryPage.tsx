@@ -30,6 +30,8 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
   const [userVotes, setUserVotes] = useState<Partial<Record<Category, string>>>({});
   const [loading, setLoading] = useState(true);
   const [canVote, setCanVote] = useState(false);
+  // Vote the user is about to switch to (asks for confirmation first).
+  const [pendingChange, setPendingChange] = useState<Costume | null>(null);
 
   const checkVotingPeriod = useCallback(() => {
     const now = new Date();
@@ -84,7 +86,28 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
     loadVotes();
   }, [loadVotes, currentUser.uid]);
 
-  const handleVote = useCallback(async (target: Costume) => {
+  const castVote = useCallback(async (target: Costume) => {
+    const previous = userVotes[target.category];
+
+    // Optimistic UI update
+    setUserVotes((prev) => ({ ...prev, [target.category]: target.id }));
+
+    const { error } = await supabase.rpc('cast_vote', { p_entry: target.id });
+    if (error) {
+      console.error('Error voting:', error);
+      toast.error(error.message || 'Failed to cast vote. Please try again.');
+      setUserVotes((prev) => {
+        const next = { ...prev };
+        if (previous) next[target.category] = previous;
+        else delete next[target.category];
+        return next;
+      });
+    } else {
+      toast.success(previous ? 'Your vote has been changed! 🔄' : 'Your vote has been cast! 🔥');
+    }
+  }, [userVotes]);
+
+  const handleVote = useCallback((target: Costume) => {
     if (!canVote) {
       const now = new Date();
       if (now < VOTE_START) {
@@ -103,23 +126,19 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
     const previous = userVotes[target.category];
     if (previous === target.id) return;
 
-    // Optimistic UI update
-    setUserVotes((prev) => ({ ...prev, [target.category]: target.id }));
-
-    const { error } = await supabase.rpc('cast_vote', { p_entry: target.id });
-    if (error) {
-      console.error('Error voting:', error);
-      toast.error(error.message || 'Failed to cast vote. Please try again.');
-      setUserVotes((prev) => {
-        const next = { ...prev };
-        if (previous) next[target.category] = previous;
-        else delete next[target.category];
-        return next;
-      });
-    } else {
-      toast.success('Your vote has been cast! 🔥');
+    // One vote per category: voting for someone else replaces the old vote, so ask first.
+    if (previous) {
+      setPendingChange(target);
+      return;
     }
-  }, [currentUser.uid, userVotes, canVote]);
+    castVote(target);
+  }, [currentUser.uid, userVotes, canVote, castVote]);
+
+  const confirmChange = () => {
+    if (pendingChange) castVote(pendingChange);
+    setPendingChange(null);
+  };
+
 
   const VotingStatus = () => {
     const now = new Date();
@@ -168,6 +187,36 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
     <div>
       <VotingStatus />
 
+      {pendingChange && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true">
+          <div className="max-w-md w-full bg-black border border-purple-500/60 rounded-2xl p-6 shadow-2xl shadow-purple-500/20">
+            <h3 className="font-display text-2xl text-orange-400 mb-3">Change your vote? / เปลี่ยนโหวตหรือไม่?</h3>
+            <p className="text-gray-200">
+              You already voted for <b>“{costumes.find((c) => c.id === userVotes[pendingChange.category])?.costumeName ?? 'another entry'}”</b>{' '}
+              in {getCategoryInfo(pendingChange.category).label}. Switch to <b>“{pendingChange.costumeName}”</b>?
+            </p>
+            <p className="text-gray-300 mt-2 text-sm">
+              คุณโหวตหมวดนี้ไปแล้ว ต้องการเปลี่ยนเป็น “{pendingChange.costumeName}” หรือไม่?
+              (1 คนโหวตได้ 1 ครั้งต่อหมวด และเปลี่ยนได้จนกว่าจะปิดโหวต)
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setPendingChange(null)}
+                className="px-4 py-2 rounded-md border border-purple-600 text-gray-200 hover:bg-purple-900/60 transition-colors"
+              >
+                Keep my vote / ใช้โหวตเดิม
+              </button>
+              <button
+                onClick={confirmChange}
+                className="px-4 py-2 rounded-md font-semibold text-white bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 transition-all"
+              >
+                Change vote / เปลี่ยนโหวต
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap justify-center gap-2 mb-8">
         {CATEGORIES.map((c) => {
           const count = costumes.filter((e) => e.category === c.id).length;
@@ -203,6 +252,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
               onVote={handleVote}
               isOwnCostume={currentUser.uid === costume.userId}
               isVotedFor={userVotes[category] === costume.id}
+              hasVotedInCategory={!!userVotes[category]}
             />
           ))}
         </div>
