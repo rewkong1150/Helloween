@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './services/supabase';
 import { rowToCostume, toAppUser, type EntryRow } from './services/entries';
 import type { AppUser, Costume, Category } from './types';
+import { COMPANY_DOMAIN, isAllowedEmail } from './config';
 
 import LoginPage from './components/LoginPage';
 import Navbar from './components/Navbar';
@@ -85,6 +86,24 @@ const App: React.FC = () => {
       <FloatingGhosts />
       {!user ? (
         <LoginPage />
+      ) : !isAllowedEmail(user.email) ? (
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <div className="max-w-md text-center bg-black/60 p-8 rounded-2xl border border-purple-500/50">
+            <h2 className="font-display text-3xl text-orange-400 mb-3">Company accounts only</h2>
+            <p className="text-gray-300">
+              This contest is open to @{COMPANY_DOMAIN} accounts. You are signed in as <b>{user.email}</b>.
+              Please sign out and use your company email.
+              <br />
+              กิจกรรมนี้สำหรับอีเมลบริษัทเท่านั้น กรุณาออกจากระบบแล้วเข้าด้วยอีเมลบริษัท
+            </p>
+            <button
+              onClick={() => supabase.auth.signOut()}
+              className="mt-6 px-5 py-2 rounded-md border border-orange-500 text-orange-400 hover:bg-orange-500 hover:text-white transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
       ) : (
         <>
           <Navbar user={user} navigate={navigate} currentPage={page} />

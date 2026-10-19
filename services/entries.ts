@@ -39,6 +39,7 @@ export const toAppUser = (user: User): AppUser => {
   const meta = user.user_metadata ?? {};
   return {
     uid: user.id,
+    email: user.email ?? '',
     displayName: meta.full_name || meta.name || user.email?.split('@')[0] || '',
     photoURL: meta.avatar_url || meta.picture || '',
   };

@@ -17,6 +17,8 @@ Project: `Helloween` (`paxsksbabtoznakdbxcb`). Do these in the Supabase dashboar
 
 1. **SQL Editor** → New query → paste all of [supabase/schema.sql](supabase/schema.sql) → Run.
    Creates the tables, security policies, the vote/results functions and the storage bucket.
+   Then run [supabase/patch-company-only.sql](supabase/patch-company-only.sql) the same way: it limits
+   everything to `@villacartegroup.com` accounts (no `+alias` addresses) and locks image edits after the deadline.
 2. **Authentication → URL Configuration**: set *Site URL* to where the app is served and add the same
    address (e.g. `http://localhost:8080/`) under *Redirect URLs*.
 3. **Authentication → Providers → Google**: enable it and paste a Google OAuth client ID/secret

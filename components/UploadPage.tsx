@@ -213,7 +213,8 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostu
 
         // ลบไฟล์เก่าหลังอัปโหลดใหม่สำเร็จ
         if (existingCostume?.mediaPath) {
-          await supabase.storage.from(MEDIA_BUCKET).remove([existingCostume.mediaPath]);
+          const { error: removeError } = await supabase.storage.from(MEDIA_BUCKET).remove([existingCostume.mediaPath]);
+          if (removeError) console.warn('Could not remove the old file:', removeError);
         }
 
         mediaPath = newPath;
@@ -273,7 +274,8 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostu
       const { error } = await supabase.from('entries').delete().eq('id', existingCostume.id);
       if (error) throw error;
       if (existingCostume.mediaPath) {
-        await supabase.storage.from(MEDIA_BUCKET).remove([existingCostume.mediaPath]);
+        const { error: removeError } = await supabase.storage.from(MEDIA_BUCKET).remove([existingCostume.mediaPath]);
+        if (removeError) console.warn('Could not remove the file:', removeError);
       }
       onCostumeUpdate(category, null);
 
@@ -363,6 +365,16 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostu
             isFormDisabled ? 'border-gray-500 bg-gray-800/20' : 'border-purple-400'
           }`}>
             <div className="space-y-1 text-center">
+              {/* Always rendered so "Change" works when editing an entry that already has a file */}
+              <input
+                id="costume-file"
+                name="costume-file"
+                type="file"
+                className="sr-only"
+                onChange={handleFileChange}
+                accept="image/*,video/*"
+                disabled={isFormDisabled}
+              />
               {preview ? (
                 <div className="relative group">
                   {existingCostume?.mediaType === 'video' || file?.type.startsWith('video/') ? (
@@ -379,7 +391,7 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostu
                     />
                   )}
                   {!isFormDisabled && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                       <label htmlFor="costume-file" className="cursor-pointer text-white font-bold py-2 px-4 rounded-lg bg-orange-600 hover:bg-orange-700">
                         Change
                       </label>
@@ -399,15 +411,6 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostu
                       }`}
                     >
                       <span>Upload a file</span>
-                      <input 
-                        id="costume-file" 
-                        name="costume-file" 
-                        type="file" 
-                        className="sr-only" 
-                        onChange={handleFileChange} 
-                        accept="image/*,video/*" 
-                        disabled={isFormDisabled}
-                      />
                     </label>
                     <p className="pl-1">or drag and drop</p>
                   </div>
@@ -418,10 +421,10 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostu
           </div>
         </div>
 
-        {/* {categoryInfo.entryName} */}
+        {/* Entry name */}
         <div className="mb-4">
           <label htmlFor="costumeName" className="block text-yellow-400 font-bold mb-2">
-            Costume Name *
+            {categoryInfo.entryName} *
           </label>
           <input
             type="text"

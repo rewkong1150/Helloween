@@ -42,6 +42,16 @@ export const CATEGORIES: CategoryInfo[] = [
 export const getCategoryInfo = (category: Category): CategoryInfo =>
   CATEGORIES.find((c) => c.id === category) ?? CATEGORIES[0];
 
+// Only company accounts may take part. Mirrors is_company_user() in supabase/patch-company-only.sql,
+// which is what the server actually enforces; this copy only lets the UI explain what is going on.
+export const COMPANY_DOMAIN = 'villacartegroup.com';
+const EXTRA_ALLOWED_EMAILS = ['rewkong1150@gmail.com'];
+export const isAllowedEmail = (email: string) => {
+  const e = email.trim().toLowerCase();
+  const domain = COMPANY_DOMAIN.replace(/\./g, '\\.');
+  return new RegExp(`^[^+@]+@${domain}$`).test(e) || EXTRA_ALLOWED_EMAILS.includes(e);
+};
+
 // Schedule (Thailand time, GMT+7). Keep in sync with upload_open()/voting_open()/results_open()
 // in supabase/schema.sql, which is what actually enforces it.
 export const UPLOAD_START = new Date('2026-10-19T00:00:00+07:00');

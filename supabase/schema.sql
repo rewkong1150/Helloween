@@ -106,3 +106,8 @@ create policy entries_files_delete on storage.objects for delete to authenticate
 
 -- ---------------------------------------------------------------- realtime
 alter publication supabase_realtime add table public.entries;
+
+-- ------------------------------------------------------------- next step
+-- Then run supabase/patch-company-only.sql: it limits the app to company accounts and makes
+-- the storage policies time-aware. (Kept as a separate file so it can be applied to a live
+-- database without re-running this script, which drops the entries and votes tables.)

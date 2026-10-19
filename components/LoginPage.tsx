@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../services/supabase';
 import { Sparkles, Mail } from 'lucide-react';
 import { toast } from './Toast';
+import { COMPANY_DOMAIN } from '../config';
 
 const redirectTo = () => window.location.origin + window.location.pathname;
 
@@ -65,12 +66,16 @@ const LoginPage: React.FC = () => {
           <span className="flex-1 h-px bg-purple-500/40"></span>
         </div>
 
+        <p className="text-sm text-gray-400 mb-3">
+          Company accounts only (@{COMPANY_DOMAIN}) / เฉพาะอีเมลบริษัท
+        </p>
+
         <form onSubmit={handleEmailLogin} className="flex gap-2">
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@company.com"
+            placeholder={`you@${COMPANY_DOMAIN}`}
             required
             className="flex-1 min-w-0 bg-purple-900/50 border border-purple-600 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
