@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { supabase } from '../services/supabase';
+import { rowToCostume, type EntryRow } from '../services/entries';
 import type { Costume, Category } from '../types';
 import { CATEGORIES, getCategoryInfo, RESULTS_AT } from '../config';
 import { Crown, Ghost } from 'lucide-react';
@@ -32,7 +32,7 @@ const PodiumItem: React.FC<{ costume: Costume; rank: number }> = ({ costume, ran
         <p className={`text-sm ${style.textColor}`}>{costume.uploaderName || costume.userName}</p>
       </div>
       <div className={`flex items-center justify-center w-full mt-2 rounded-t-lg ${style.color} ${style.height}`}>
-        <span className="text-4xl font-bold text-black">{costume.voteCount}</span>
+        <span className="text-4xl font-bold text-black">{costume.voteCount ?? 0}</span>
       </div>
     </div>
   );
@@ -40,7 +40,7 @@ const PodiumItem: React.FC<{ costume: Costume; rank: number }> = ({ costume, ran
 
 // LeaderboardItem
 const LeaderboardItem: React.FC<{ costume: Costume; rank: number; totalVotes: number }> = ({ costume, rank, totalVotes }) => {
-  const percentage = totalVotes > 0 ? (costume.voteCount / totalVotes) * 100 : 0;
+  const percentage = totalVotes > 0 ? ((costume.voteCount ?? 0) / totalVotes) * 100 : 0;
   return (
     <div className="flex items-center p-4 bg-purple-900/30 rounded-lg mb-3 transition-all hover:bg-purple-900/50">
       <span className="text-2xl font-bold text-orange-400 w-12 text-center">{rank}</span>
@@ -52,7 +52,7 @@ const LeaderboardItem: React.FC<{ costume: Costume; rank: number; totalVotes: nu
           <div className="bg-gradient-to-r from-orange-500 to-yellow-500 h-2.5 rounded-full" style={{ width: `${percentage}%` }}></div>
         </div>
       </div>
-      <span className="text-xl font-bold text-yellow-400 w-20 text-right">{costume.voteCount} votes</span>
+      <span className="text-xl font-bold text-yellow-400 w-20 text-right">{costume.voteCount ?? 0} votes</span>
     </div>
   );
 };
@@ -74,19 +74,33 @@ const ResultsPage: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch entries
+  // Totals are only released by the server once results open.
   useEffect(() => {
-    const q = query(collection(db, 'costumes'), orderBy('voteCount', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const costumesData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Costume));
-      setCostumes(costumesData);
-      setLoading(false);
-    }, (error) => {
-        console.error("Error fetching results:", error);
+    if (timeLeft > 0) return;
+    let cancelled = false;
+    (async () => {
+      const [entriesRes, resultsRes] = await Promise.all([
+        supabase.from('entries').select('*'),
+        supabase.rpc('get_results'),
+      ]);
+      if (entriesRes.error || resultsRes.error) {
+        console.error('Error fetching results:', entriesRes.error ?? resultsRes.error);
+      }
+      const counts = new Map<string, number>(
+        ((resultsRes.data ?? []) as { entry_id: string; vote_count: number }[]).map((r) => [r.entry_id, Number(r.vote_count)])
+      );
+      const list = ((entriesRes.data ?? []) as EntryRow[])
+        .map((row) => rowToCostume(row, counts.get(row.id) ?? 0))
+        .sort((a, b) => (b.voteCount ?? 0) - (a.voteCount ?? 0));
+      if (!cancelled) {
+        setCostumes(list);
         setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [timeLeft > 0]);
 
   const formatTime = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -113,7 +127,7 @@ const ResultsPage: React.FC = () => {
   }
 
   const inCategory = costumes.filter((c) => c.category === category);
-  const totalVotes = inCategory.reduce((sum, costume) => sum + costume.voteCount, 0);
+  const totalVotes = inCategory.reduce((sum, costume) => sum + (costume.voteCount ?? 0), 0);
   const topThree = inCategory.slice(0, 3);
   const rest = inCategory.slice(3);
   const categoryInfo = getCategoryInfo(category);

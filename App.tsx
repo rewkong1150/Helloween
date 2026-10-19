@@ -1,9 +1,7 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { auth, db } from './services/firebase';
-import type { Costume, Category } from './types';
+import { supabase } from './services/supabase';
+import { rowToCostume, toAppUser, type EntryRow } from './services/entries';
+import type { AppUser, Costume, Category } from './types';
 
 import LoginPage from './components/LoginPage';
 import Navbar from './components/Navbar';
@@ -16,27 +14,35 @@ import { ToastContainer } from './components/Toast';
 type Page = 'gallery' | 'upload' | 'results';
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState<Page>('gallery');
   const [userCostumes, setUserCostumes] = useState<Costume[]>([]);
 
   const fetchUserCostumes = useCallback(async (userId: string) => {
-    const snap = await getDocs(query(collection(db, 'costumes'), where('userId', '==', userId)));
-    setUserCostumes(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Costume)));
+    const { data, error } = await supabase.from('entries').select('*').eq('user_id', userId);
+    if (error) console.error('Error loading your entries:', error);
+    setUserCostumes(((data ?? []) as EntryRow[]).map((row) => rowToCostume(row)));
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        await fetchUserCostumes(currentUser.uid);
+    const applySession = async (supabaseUser: Parameters<typeof toAppUser>[0] | null) => {
+      if (supabaseUser) {
+        setUser(toAppUser(supabaseUser));
+        await fetchUserCostumes(supabaseUser.id);
       } else {
+        setUser(null);
         setUserCostumes([]);
       }
       setLoading(false);
+    };
+
+    supabase.auth.getSession().then(({ data }) => applySession(data.session?.user ?? null));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Defer: calling supabase inside this callback can deadlock the auth lock.
+      setTimeout(() => applySession(session?.user ?? null), 0);
     });
-    return () => unsubscribe();
+    return () => listener.subscription.unsubscribe();
   }, [fetchUserCostumes]);
 
   useEffect(() => {

@@ -124,7 +124,6 @@ const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onVote, isOwnCostume
               {costume.position && <p>Position: {costume.position}</p>}
               {costume.uploaderName && <p>Uploader: {costume.uploaderName}</p>}
               {costume.description && <p>Description: {costume.description}</p>}
-              <p>Votes: {costume.voteCount}</p>
             </div>
           </div>
         </div>

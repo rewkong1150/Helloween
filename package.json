@@ -9,11 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@firebase/app": "^0.14.3",
-    "@firebase/auth": "^1.11.0",
-    "@firebase/firestore": "^4.9.2",
-    "@firebase/storage": "^0.14.0",
-    "firebase": "^12.3.0",
+    "@supabase/supabase-js": "^2.118.0",
     "lucide-react": "^0.544.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"

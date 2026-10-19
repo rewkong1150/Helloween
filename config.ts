@@ -42,10 +42,8 @@ export const CATEGORIES: CategoryInfo[] = [
 export const getCategoryInfo = (category: Category): CategoryInfo =>
   CATEGORIES.find((c) => c.id === category) ?? CATEGORIES[0];
 
-// One entry and one vote per user per category.
-export const entryId = (uid: string, category: Category) => `${uid}_${category}`;
-
-// Schedule (Thailand time, GMT+7).
+// Schedule (Thailand time, GMT+7). Keep in sync with upload_open()/voting_open()/results_open()
+// in supabase/schema.sql, which is what actually enforces it.
 export const UPLOAD_START = new Date('2026-10-19T00:00:00+07:00');
 export const UPLOAD_END = new Date('2026-10-29T23:59:59+07:00');
 export const VOTE_START = new Date('2026-10-30T00:00:00+07:00');

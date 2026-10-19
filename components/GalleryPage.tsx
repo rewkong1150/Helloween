@@ -1,28 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import type { User } from 'firebase/auth';
-import {
-  collection,
-  onSnapshot,
-  query,
-  orderBy,
-  where,
-  doc,
-  setDoc,
-  updateDoc,
-  increment,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { db } from '../services/firebase';
-import type { Costume, Vote, Category } from '../types';
-import { CATEGORIES, entryId, getCategoryInfo, VOTE_START, VOTE_END } from '../config';
+import { supabase } from '../services/supabase';
+import { rowToCostume, type EntryRow } from '../services/entries';
+import type { AppUser, Costume, Category } from '../types';
+import { CATEGORIES, getCategoryInfo, VOTE_START, VOTE_END } from '../config';
 import CostumeCard from './CostumeCard';
 import { toast } from './Toast';
 
 interface GalleryPageProps {
-  currentUser: User;
+  currentUser: AppUser;
 }
-
-type StoredVote = Vote & { docId: string };
 
 const SkeletonCard: React.FC = () => (
   <div className="bg-gray-900/50 p-4 rounded-lg animate-pulse">
@@ -40,8 +26,8 @@ const SkeletonCard: React.FC = () => (
 const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
   const [costumes, setCostumes] = useState<Costume[]>([]);
   const [category, setCategory] = useState<Category>('costume');
-  // The current user's vote in each category, with the vote document id it is stored under.
-  const [userVotes, setUserVotes] = useState<Partial<Record<Category, StoredVote>>>({});
+  // The entry the current user voted for, per category.
+  const [userVotes, setUserVotes] = useState<Partial<Record<Category, string>>>({});
   const [loading, setLoading] = useState(true);
   const [canVote, setCanVote] = useState(false);
 
@@ -52,109 +38,89 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
 
   useEffect(() => {
     setCanVote(checkVotingPeriod());
-
-    // อัพเดทสถานะทุกนาที
-    const interval = setInterval(() => {
-      setCanVote(checkVotingPeriod());
-    }, 60000);
-
+    const interval = setInterval(() => setCanVote(checkVotingPeriod()), 60000);
     return () => clearInterval(interval);
   }, [checkVotingPeriod]);
 
-  useEffect(() => {
-    const q = query(collection(db, 'costumes'), orderBy('uploadedAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const costumesData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Costume));
-      setCostumes(costumesData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching costumes:", error);
-      toast.error("Could not load entries.");
-      setLoading(false);
-    });
-    return () => unsubscribe();
+  const loadEntries = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('entries')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.error('Error fetching entries:', error);
+      toast.error('Could not load entries.');
+    } else {
+      setCostumes((data as EntryRow[]).map((row) => rowToCostume(row)));
+    }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
-    if (!currentUser) return;
-    const q = query(collection(db, 'votes'), where('voterId', '==', currentUser.uid));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const votes: Partial<Record<Category, StoredVote>> = {};
-      snapshot.docs.forEach((d) => {
-        const vote = d.data() as Vote;
-        votes[vote.category] = { ...vote, docId: d.id };
-      });
-      setUserVotes(votes);
+    loadEntries();
+    const channel = supabase
+      .channel('entries-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'entries' }, () => loadEntries())
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadEntries]);
+
+  const loadVotes = useCallback(async () => {
+    const { data, error } = await supabase.from('votes').select('category, entry_id');
+    if (error) {
+      console.error('Error fetching votes:', error);
+      return;
+    }
+    const votes: Partial<Record<Category, string>> = {};
+    (data ?? []).forEach((v) => {
+      votes[v.category as Category] = v.entry_id as string;
     });
-    return () => unsubscribe();
-  }, [currentUser]);
+    setUserVotes(votes);
+  }, []);
+
+  useEffect(() => {
+    loadVotes();
+  }, [loadVotes, currentUser.uid]);
 
   const handleVote = useCallback(async (target: Costume) => {
-    if (!currentUser) return;
-
     if (!canVote) {
       const now = new Date();
       if (now < VOTE_START) {
-        toast.error("Voting will start on October 30, 2026! 🎃");
+        toast.error('Voting will start on October 30, 2026! 🎃');
       } else if (now > VOTE_END) {
-        toast.error("Voting period has ended! Thank you for participating! 👻");
+        toast.error('Voting period has ended! Thank you for participating! 👻');
       }
       return;
     }
 
-    const currentUserId = currentUser.uid;
-    const targetCategory = target.category;
-
-    if (currentUserId === target.userId) {
-      toast.error("You cannot vote for yourself! 🎃");
+    if (currentUser.uid === target.userId) {
+      toast.error('You cannot vote for yourself! 🎃');
       return;
     }
 
-    const previousVote = userVotes[targetCategory];
-    if (previousVote?.votedFor === target.id) return;
+    const previous = userVotes[target.category];
+    if (previous === target.id) return;
 
     // Optimistic UI update
-    const voteDocId = previousVote?.docId ?? entryId(currentUserId, targetCategory);
-    setUserVotes((prev) => ({
-      ...prev,
-      [targetCategory]: {
-        voterId: currentUserId,
-        votedFor: target.id,
-        category: targetCategory,
-        votedAt: serverTimestamp(),
-        docId: voteDocId,
-      } as StoredVote,
-    }));
+    setUserVotes((prev) => ({ ...prev, [target.category]: target.id }));
 
-    try {
-      if (previousVote) {
-        await updateDoc(doc(db, 'costumes', previousVote.votedFor), { voteCount: increment(-1) });
-      }
-
-      await setDoc(doc(db, 'votes', voteDocId), {
-        voterId: currentUserId,
-        votedFor: target.id,
-        category: targetCategory,
-        votedAt: serverTimestamp(),
-      });
-
-      await updateDoc(doc(db, 'costumes', target.id), { voteCount: increment(1) });
-
-      toast.success("Your vote has been cast! 🔥");
-    } catch (error) {
-      console.error("Error voting:", error);
-      toast.error("Failed to cast vote. Please try again.");
-      // Revert optimistic update on error
+    const { error } = await supabase.rpc('cast_vote', { p_entry: target.id });
+    if (error) {
+      console.error('Error voting:', error);
+      toast.error(error.message || 'Failed to cast vote. Please try again.');
       setUserVotes((prev) => {
         const next = { ...prev };
-        if (previousVote) next[targetCategory] = previousVote;
-        else delete next[targetCategory];
+        if (previous) next[target.category] = previous;
+        else delete next[target.category];
         return next;
       });
+    } else {
+      toast.success('Your vote has been cast! 🔥');
     }
-  }, [currentUser, userVotes, canVote]);
+  }, [currentUser.uid, userVotes, canVote]);
 
-  // แสดงสถานะเวลาโหวต
   const VotingStatus = () => {
     const now = new Date();
 
@@ -176,16 +142,15 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
           </p>
         </div>
       );
-    } else {
-      return (
-        <div className="text-center mb-8 p-4 bg-green-900/50 rounded-lg border border-green-700">
-          <h3 className="text-xl font-creepster text-green-400">Voting is Live! 🎃</h3>
-          <p className="text-gray-300 mt-2">
-            Cast your vote now — one vote per category! Voting ends October 30 at 23:59
-          </p>
-        </div>
-      );
     }
+    return (
+      <div className="text-center mb-8 p-4 bg-green-900/50 rounded-lg border border-green-700">
+        <h3 className="text-xl font-creepster text-green-400">Voting is Live! 🎃</h3>
+        <p className="text-gray-300 mt-2">
+          Cast your vote now — one vote per category! Voting ends October 30 at 23:59
+        </p>
+      </div>
+    );
   };
 
   if (loading) {
@@ -237,7 +202,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
               costume={costume}
               onVote={handleVote}
               isOwnCostume={currentUser.uid === costume.userId}
-              isVotedFor={userVotes[category]?.votedFor === costume.id}
+              isVotedFor={userVotes[category] === costume.id}
             />
           ))}
         </div>

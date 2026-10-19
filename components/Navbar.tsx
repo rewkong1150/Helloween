@@ -1,14 +1,13 @@
 
 import React from 'react';
-import type { User } from 'firebase/auth';
-import { auth } from '../services/firebase';
-import { signOut } from 'firebase/auth';
+import type { AppUser } from '../types';
+import { supabase } from '../services/supabase';
 // FIX: The 'Pumpkin' icon does not exist in lucide-react. Replaced it with the 'Ghost' icon to fit the Halloween theme.
 import { GalleryHorizontal, LogOut, Upload, Trophy, Ghost } from 'lucide-react';
 import { toast } from './Toast';
 
 interface NavbarProps {
-  user: User;
+  user: AppUser;
   navigate: (page: 'gallery' | 'upload' | 'results') => void;
   currentPage: 'gallery' | 'upload' | 'results';
 }
@@ -33,7 +32,8 @@ const NavLink: React.FC<{
 const Navbar: React.FC<NavbarProps> = ({ user, navigate, currentPage }) => {
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
       toast.success("You've been logged out!");
     } catch (error) {
       console.error(error);

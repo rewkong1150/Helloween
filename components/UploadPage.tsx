@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import type { User } from 'firebase/auth';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { db, storage } from '../services/firebase';
-import type { Costume, Category } from '../types';
-import { CATEGORIES, entryId, getCategoryInfo, UPLOAD_START, UPLOAD_END } from '../config';
+import { supabase, MEDIA_BUCKET } from '../services/supabase';
+import { rowToCostume, type EntryRow } from '../services/entries';
+import type { AppUser, Costume, Category } from '../types';
+import { CATEGORIES, getCategoryInfo, UPLOAD_START, UPLOAD_END } from '../config';
 import { UploadCloud, Trash2, Wand2, Clock, Calendar } from 'lucide-react';
 import { toast } from './Toast';
 
 interface UploadPageProps {
-  user: User;
+  user: AppUser;
   existingCostumes: Costume[];
   onCostumeUpdate: (category: Category, costume: Costume | null) => void;
 }
@@ -197,60 +195,56 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostu
 
     try {
       let mediaUrl = existingCostume?.mediaUrl || '';
-      let mediaType = existingCostume?.mediaType || 'image';
+      let mediaPath = existingCostume?.mediaPath || '';
+      let mediaType: 'image' | 'video' = existingCostume?.mediaType || 'image';
 
       // อัปโหลดไฟล์ใหม่ถ้ามี
       if (file) {
-        // ลบไฟล์เก่าถ้ามี
-        if (existingCostume?.mediaUrl) {
-          try {
-            const oldFileRef = ref(storage, existingCostume.mediaUrl);
-            await deleteObject(oldFileRef);
-          } catch (error) {
-            console.log("Error deleting old file:", error);
-          }
-        }
-
         const uploadFile = file.type.startsWith("image/")
           ? await compressImage(file)
           : file;
 
-        const timestamp = Date.now();
-        const fileExtension = file.name.split('.').pop();
-        const fileName = `${category}_${timestamp}.${fileExtension}`;
-        
-        const mediaRef = ref(storage, `costumes/${user.uid}/${fileName}`);
-        const snapshot = await uploadBytes(mediaRef, uploadFile);
-        mediaUrl = await getDownloadURL(snapshot.ref);
+        const fileExtension = (file.name.split('.').pop() || 'bin').toLowerCase();
+        const newPath = `${user.uid}/${category}_${Date.now()}.${fileExtension}`;
+        const { error: uploadError } = await supabase.storage
+          .from(MEDIA_BUCKET)
+          .upload(newPath, uploadFile, { contentType: uploadFile.type || file.type });
+        if (uploadError) throw uploadError;
+
+        // ลบไฟล์เก่าหลังอัปโหลดใหม่สำเร็จ
+        if (existingCostume?.mediaPath) {
+          await supabase.storage.from(MEDIA_BUCKET).remove([existingCostume.mediaPath]);
+        }
+
+        mediaPath = newPath;
+        mediaUrl = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(newPath).data.publicUrl;
         mediaType = file.type.startsWith("video/") ? "video" : "image";
       }
 
-      const costumeData = {
-        userId: user.uid,
-        userName: user.displayName || '',
-        userPhoto: user.photoURL || '',
-        uploaderName: uploaderName.trim(),
-        mediaUrl,
-        mediaType,
-        costumeName: costumeName.trim(),
-        category,
-        position: position.trim(),
-        description: description.trim(),
-        uploadedAt: existingCostume?.uploadedAt || serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        voteCount: existingCostume?.voteCount || 0,
-      };
+      const { data, error } = await supabase
+        .from('entries')
+        .upsert(
+          {
+            user_id: user.uid,
+            category,
+            user_name: user.displayName,
+            user_photo: user.photoURL,
+            uploader_name: uploaderName.trim(),
+            name: costumeName.trim(),
+            position: position.trim(),
+            description: description.trim(),
+            media_url: mediaUrl,
+            media_path: mediaPath,
+            media_type: mediaType,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,category' }
+        )
+        .select()
+        .single();
+      if (error) throw error;
 
-      const docId = existingCostume?.id ?? entryId(user.uid, category);
-      await setDoc(doc(db, 'costumes', docId), costumeData);
-      
-      const updatedCostume = {
-        ...costumeData,
-        id: docId,
-        uploadedAt: existingCostume?.uploadedAt || new Date(),
-      } as unknown as Costume;
-      
-      onCostumeUpdate(category, updatedCostume);
+      onCostumeUpdate(category, rowToCostume(data as EntryRow));
       toast.success("อัปโหลดสำเร็จแล้ว! / Upload successful!");
 
     } catch (error) {
@@ -275,16 +269,14 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostu
     
     setIsDeleting(true);
     try {
-      // ลบไฟล์จาก storage
-      if (existingCostume.mediaUrl) {
-        const fileRef = ref(storage, existingCostume.mediaUrl);
-        await deleteObject(fileRef);
+      // ลบข้อมูลก่อน แล้วค่อยลบไฟล์จาก storage
+      const { error } = await supabase.from('entries').delete().eq('id', existingCostume.id);
+      if (error) throw error;
+      if (existingCostume.mediaPath) {
+        await supabase.storage.from(MEDIA_BUCKET).remove([existingCostume.mediaPath]);
       }
-      
-      // ลบข้อมูลจาก firestore
-      await deleteDoc(doc(db, 'costumes', existingCostume.id));
       onCostumeUpdate(category, null);
-      
+
       // รีเซ็ตฟอร์ม
       setCostumeName('');
       setPosition('');
@@ -296,14 +288,7 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostu
       toast.success("ลบผลงานสำเร็จแล้ว! / Entry deleted successfully!");
     } catch (error) {
       console.error("Error deleting costume:", error);
-      // ถ้าลบไฟล์ไม่สำเร็จ แต่ลบ document สำเร็จ
-      if (error instanceof Error && 'code' in error && error.code === 'storage/object-not-found') {
-        await deleteDoc(doc(db, 'costumes', existingCostume.id));
-        onCostumeUpdate(category, null);
-        toast.success("ลบผลงานสำเร็จแล้ว! / Entry deleted successfully!");
-      } else {
-        toast.error("ลบผลงานล้มเหลว / Failed to delete.");
-      }
+      toast.error("ลบผลงานล้มเหลว / Failed to delete.");
     } finally {
       setIsDeleting(false);
     }
