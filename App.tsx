@@ -88,7 +88,7 @@ const App: React.FC = () => {
       ) : (
         <>
           <Navbar user={user} navigate={navigate} currentPage={page} />
-          <main className="container mx-auto px-4 py-8 pt-24">
+          <main className="relative z-10 container mx-auto px-4 py-8 pt-24">
             {page === 'gallery' && <GalleryPage currentUser={user} />}
             {page === 'upload' && <UploadPage user={user} existingCostumes={userCostumes} onCostumeUpdate={handleCostumeUpdate} />}
             {page === 'results' && <ResultsPage />}
