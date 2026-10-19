@@ -1,0 +1,54 @@
+import type { Category } from './types';
+
+export interface CategoryInfo {
+  id: Category;
+  emoji: string;
+  label: string;
+  labelTh: string;
+  description: string;
+  entryName: string;
+  hint?: string;
+}
+
+export const CATEGORIES: CategoryInfo[] = [
+  {
+    id: 'costume',
+    emoji: '🧛',
+    label: 'Best Halloween Costume',
+    labelTh: 'ชุดฮาโลวีนยอดเยี่ยม',
+    description: 'Your most creative, scary, funny, or unexpected Halloween look!',
+    entryName: 'Costume Name',
+  },
+  {
+    id: 'decoration',
+    emoji: '🏚️',
+    label: 'Best Decoration or Prop',
+    labelTh: 'ของตกแต่ง/พร็อพยอดเยี่ยม',
+    description: 'A decorated home, a spooky corner, or an amazing Halloween accessory.',
+    entryName: 'Decoration / Prop Name',
+  },
+  {
+    id: 'pet',
+    emoji: '🐾',
+    label: 'Best Pet Halloween Look',
+    labelTh: 'สัตว์เลี้ยงสุดน่ารักสไตล์ฮาโลวีน',
+    description: 'Our furry friends get their own category!',
+    entryName: 'Pet Name / Look',
+    hint: 'Please make sure your pet is comfortable and happy — no costumes or accessories if they cause stress. A cute Halloween-themed photo or a simple festive accessory is more than enough. ❤️ / ขอให้สัตว์เลี้ยงสบายใจ ไม่ต้องแต่งตัวถ้าทำให้เครียด',
+  },
+];
+
+export const categoryOf = (entry: { category?: Category }): Category => entry.category ?? 'costume';
+
+export const getCategoryInfo = (category: Category): CategoryInfo =>
+  CATEGORIES.find((c) => c.id === category) ?? CATEGORIES[0];
+
+// One entry and one vote per user per category.
+export const entryId = (uid: string, category: Category) => `${uid}_${category}`;
+
+// Schedule (Thailand time, GMT+7).
+export const UPLOAD_START = new Date('2026-10-19T00:00:00+07:00');
+export const UPLOAD_END = new Date('2026-10-29T23:59:59+07:00');
+export const VOTE_START = new Date('2026-10-30T00:00:00+07:00');
+export const VOTE_END = new Date('2026-10-30T23:59:59+07:00');
+export const RESULTS_AT = new Date('2026-10-31T00:00:00+07:00');

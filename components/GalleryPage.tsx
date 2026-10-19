@@ -5,21 +5,24 @@ import {
   onSnapshot,
   query,
   orderBy,
+  where,
   doc,
-  getDoc,
   setDoc,
   updateDoc,
   increment,
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import type { Costume, Vote } from '../types';
+import type { Costume, Vote, Category } from '../types';
+import { CATEGORIES, categoryOf, entryId, getCategoryInfo, VOTE_START, VOTE_END } from '../config';
 import CostumeCard from './CostumeCard';
 import { toast } from './Toast';
 
 interface GalleryPageProps {
   currentUser: User;
 }
+
+type StoredVote = Vote & { docId: string };
 
 const SkeletonCard: React.FC = () => (
   <div className="bg-gray-900/50 p-4 rounded-lg animate-pulse">
@@ -36,27 +39,25 @@ const SkeletonCard: React.FC = () => (
 
 const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
   const [costumes, setCostumes] = useState<Costume[]>([]);
-  const [userVote, setUserVote] = useState<Vote | null>(null);
+  const [category, setCategory] = useState<Category>('costume');
+  // The current user's vote in each category, with the vote document id it is stored under.
+  const [userVotes, setUserVotes] = useState<Partial<Record<Category, StoredVote>>>({});
   const [loading, setLoading] = useState(true);
   const [canVote, setCanVote] = useState(false);
 
-  // ฟังก์ชันตรวจสอบว่าเป็นช่วงเวลาโหวตหรือไม่
   const checkVotingPeriod = useCallback(() => {
     const now = new Date();
-    const voteStart = new Date('2025-11-03T13:00:00+07:00'); // 13:00 GMT+7
-    const voteEnd = new Date('2025-11-03T16:00:00+07:00'); // 16:00 GMT+7
-    
-    return now >= voteStart && now <= voteEnd;
+    return now >= VOTE_START && now <= VOTE_END;
   }, []);
 
   useEffect(() => {
     setCanVote(checkVotingPeriod());
-    
+
     // อัพเดทสถานะทุกนาที
     const interval = setInterval(() => {
       setCanVote(checkVotingPeriod());
     }, 60000);
-    
+
     return () => clearInterval(interval);
   }, [checkVotingPeriod]);
 
@@ -68,7 +69,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
       setLoading(false);
     }, (error) => {
       console.error("Error fetching costumes:", error);
-      toast.error("Could not load costumes.");
+      toast.error("Could not load entries.");
       setLoading(false);
     });
     return () => unsubscribe();
@@ -76,100 +77,102 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
 
   useEffect(() => {
     if (!currentUser) return;
-    const voteRef = doc(db, 'votes', currentUser.uid);
-    const unsubscribe = onSnapshot(voteRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setUserVote(docSnap.data() as Vote);
-      } else {
-        setUserVote(null);
-      }
+    const q = query(collection(db, 'votes'), where('voterId', '==', currentUser.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const votes: Partial<Record<Category, StoredVote>> = {};
+      snapshot.docs.forEach((d) => {
+        const vote = d.data() as Vote;
+        votes[categoryOf(vote)] = { ...vote, docId: d.id };
+      });
+      setUserVotes(votes);
     });
     return () => unsubscribe();
   }, [currentUser]);
 
-  const handleVote = useCallback(async (targetUserId: string) => {
+  const handleVote = useCallback(async (target: Costume) => {
     if (!currentUser) return;
-    
-    // ตรวจสอบช่วงเวลาโหวต
+
     if (!canVote) {
-      const voteStart = new Date('2025-11-03T13:00:00+07:00');
-      const voteEnd = new Date('2025-11-03T16:00:00+07:00');
-      
       const now = new Date();
-      if (now < voteStart) {
-        toast.error("Voting will start on November 3, 2025 at 13:00! 🎃");
-      } else if (now > voteEnd) {
+      if (now < VOTE_START) {
+        toast.error("Voting will start on October 30, 2026! 🎃");
+      } else if (now > VOTE_END) {
         toast.error("Voting period has ended! Thank you for participating! 👻");
       }
       return;
     }
 
     const currentUserId = currentUser.uid;
+    const targetCategory = categoryOf(target);
 
-    if (currentUserId === targetUserId) {
+    if (currentUserId === target.userId) {
       toast.error("You cannot vote for yourself! 🎃");
       return;
     }
-    
+
+    const previousVote = userVotes[targetCategory];
+    if (previousVote?.votedFor === target.id) return;
+
     // Optimistic UI update
-    const previousVote = userVote;
-    const newVote = { voterId: currentUserId, votedFor: targetUserId, votedAt: serverTimestamp() };
-    setUserVote(newVote as Vote);
-    
+    const voteDocId = previousVote?.docId ?? entryId(currentUserId, targetCategory);
+    setUserVotes((prev) => ({
+      ...prev,
+      [targetCategory]: {
+        voterId: currentUserId,
+        votedFor: target.id,
+        category: targetCategory,
+        votedAt: serverTimestamp(),
+        docId: voteDocId,
+      } as StoredVote,
+    }));
+
     try {
-        const voteRef = doc(db, 'votes', currentUserId);
-        const oldVoteSnap = await getDoc(voteRef);
+      if (previousVote) {
+        await updateDoc(doc(db, 'costumes', previousVote.votedFor), { voteCount: increment(-1) });
+      }
 
-        if (oldVoteSnap.exists() && oldVoteSnap.data().votedFor !== targetUserId) {
-            const oldTargetId = oldVoteSnap.data().votedFor;
-            await updateDoc(doc(db, 'costumes', oldTargetId), {
-                voteCount: increment(-1)
-            });
-        }
-        
-        await setDoc(voteRef, {
-            voterId: currentUserId,
-            votedFor: targetUserId,
-            votedAt: serverTimestamp()
-        });
+      await setDoc(doc(db, 'votes', voteDocId), {
+        voterId: currentUserId,
+        votedFor: target.id,
+        category: targetCategory,
+        votedAt: serverTimestamp(),
+      });
 
-        if (!oldVoteSnap.exists() || oldVoteSnap.data().votedFor !== targetUserId) {
-             await updateDoc(doc(db, 'costumes', targetUserId), {
-                voteCount: increment(1)
-            });
-        }
+      await updateDoc(doc(db, 'costumes', target.id), { voteCount: increment(1) });
 
-        toast.success("Your vote has been cast! 🔥");
-
+      toast.success("Your vote has been cast! 🔥");
     } catch (error) {
-        console.error("Error voting:", error);
-        toast.error("Failed to cast vote. Please try again.");
-        // Revert optimistic update on error
-        setUserVote(previousVote);
+      console.error("Error voting:", error);
+      toast.error("Failed to cast vote. Please try again.");
+      // Revert optimistic update on error
+      setUserVotes((prev) => {
+        const next = { ...prev };
+        if (previousVote) next[targetCategory] = previousVote;
+        else delete next[targetCategory];
+        return next;
+      });
     }
-  }, [currentUser, userVote, canVote]);
+  }, [currentUser, userVotes, canVote]);
 
   // แสดงสถานะเวลาโหวต
   const VotingStatus = () => {
     const now = new Date();
-    const voteStart = new Date('2025-11-03T13:00:00+07:00');
-    const voteEnd = new Date('2025-11-03T16:00:00+07:00');
-    
-    if (now < voteStart) {
+
+    if (now < VOTE_START) {
       return (
         <div className="text-center mb-8 p-4 bg-blue-900/50 rounded-lg border border-blue-700">
           <h3 className="text-xl font-creepster text-blue-400">Voting Starts Soon!</h3>
           <p className="text-gray-300 mt-2">
-            Voting will begin on November 3, 2025 from 13:00 - 16:00
+            Voting opens on October 30, 2026 — one vote in each of the 3 categories 🏆
           </p>
         </div>
       );
-    } else if (now > voteEnd) {
+    } else if (now > VOTE_END) {
       return (
         <div className="text-center mb-8 p-4 bg-purple-900/50 rounded-lg border border-purple-700">
           <h3 className="text-xl font-creepster text-purple-400">Voting Has Ended!</h3>
           <p className="text-gray-300 mt-2">
-            Thank you for participating in the costume contest! 🎉
+            Thank you for participating in the Halloween Challenge! 🎉
           </p>
         </div>
       );
@@ -178,13 +181,13 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
         <div className="text-center mb-8 p-4 bg-green-900/50 rounded-lg border border-green-700">
           <h3 className="text-xl font-creepster text-green-400">Voting is Live! 🎃</h3>
           <p className="text-gray-300 mt-2">
-            Cast your vote now! Voting ends at 16:00
+            Cast your vote now — one vote per category! Voting ends October 30 at 23:59
           </p>
         </div>
       );
     }
   };
-  
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -193,30 +196,52 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
     );
   }
 
-  if (costumes.length === 0) {
-      return (
-          <div className="text-center py-20">
-              <h2 className="text-4xl font-creepster text-yellow-400">The Crypt is Empty!</h2>
-              <p className="mt-4 text-lg text-gray-300">No costumes have been uploaded yet. Be the first to show off your spooky style!</p>
-          </div>
-      )
-  }
+  const visibleCostumes = costumes.filter((c) => categoryOf(c) === category);
+  const categoryInfo = getCategoryInfo(category);
 
   return (
     <div>
       <VotingStatus />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {costumes.map((costume) => (
-          <CostumeCard
-            key={costume.id}
-            costume={costume}
-            onVote={handleVote}
-            isOwnCostume={currentUser.uid === costume.userId}
-            isVotedFor={userVote?.votedFor === costume.userId}
-            canVote={canVote}
-          />
-        ))}
+
+      <div className="flex flex-wrap justify-center gap-2 mb-8">
+        {CATEGORIES.map((c) => {
+          const count = costumes.filter((e) => categoryOf(e) === c.id).length;
+          return (
+            <button
+              key={c.id}
+              onClick={() => setCategory(c.id)}
+              className={`px-4 py-2 rounded-full font-semibold border transition-all ${
+                category === c.id
+                  ? 'bg-gradient-to-r from-orange-500 to-yellow-500 border-transparent text-white'
+                  : 'border-purple-600 bg-purple-900/40 text-gray-200 hover:border-orange-400'
+              }`}
+            >
+              {c.emoji} {c.label} <span className="opacity-70">({count})</span>
+            </button>
+          );
+        })}
       </div>
+
+      {visibleCostumes.length === 0 ? (
+        <div className="text-center py-20">
+          <h2 className="text-4xl font-creepster text-yellow-400">The Crypt is Empty!</h2>
+          <p className="mt-4 text-lg text-gray-300">
+            No entries in “{categoryInfo.label}” yet. {categoryInfo.description}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {visibleCostumes.map((costume) => (
+            <CostumeCard
+              key={costume.id}
+              costume={costume}
+              onVote={handleVote}
+              isOwnCostume={currentUser.uid === costume.userId}
+              isVotedFor={userVotes[category]?.votedFor === costume.id}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

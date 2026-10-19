@@ -3,14 +3,15 @@ import type { User } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db, storage } from '../services/firebase';
-import type { Costume } from '../types';
+import type { Costume, Category } from '../types';
+import { CATEGORIES, categoryOf, entryId, getCategoryInfo, UPLOAD_START, UPLOAD_END } from '../config';
 import { UploadCloud, Trash2, Wand2, Clock, Calendar } from 'lucide-react';
 import { toast } from './Toast';
 
 interface UploadPageProps {
   user: User;
-  existingCostume: Costume | null;
-  onCostumeUpdate: (costume: Costume | null) => void;
+  existingCostumes: Costume[];
+  onCostumeUpdate: (category: Category, costume: Costume | null) => void;
 }
 
 // compressImage สำหรับไฟล์รูป (วีดีโอจะไม่บีบอัด)
@@ -68,7 +69,10 @@ const compressImage = (file: File, maxSizeMB = 1): Promise<Blob> => {
   });
 };
 
-const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostume, onCostumeUpdate }) => {
+const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostumeUpdate }) => {
+  const [category, setCategory] = useState<Category>('costume');
+  const categoryInfo = getCategoryInfo(category);
+  const existingCostume = existingCostumes.find((c) => categoryOf(c) === category) ?? null;
   const [costumeName, setCostumeName] = useState('');
   const [position, setPosition] = useState('');
   const [uploaderName, setUploaderName] = useState('');
@@ -79,18 +83,13 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostume, onCostum
   const [isDeleting, setIsDeleting] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'before' | 'during' | 'after'>('before');
 
-  // กำหนดช่วงเวลา (ใช้ปี 2024)
-const UPLOAD_START = new Date('2025-10-31T00:00:00+07:00');
-const UPLOAD_END = new Date('2025-11-02T23:59:59+07:00');
-
   useEffect(() => {
-    if (existingCostume) {
-      setCostumeName(existingCostume.costumeName);
-      setPosition(existingCostume.position || '');
-      setUploaderName(existingCostume.uploaderName || '');
-      setDescription(existingCostume.description || '');
-      setPreview(existingCostume.mediaUrl);
-    }
+    setCostumeName(existingCostume?.costumeName ?? '');
+    setPosition(existingCostume?.position ?? '');
+    setUploaderName(existingCostume?.uploaderName ?? '');
+    setDescription(existingCostume?.description ?? '');
+    setFile(null);
+    setPreview(existingCostume?.mediaUrl ?? null);
   }, [existingCostume]);
 
   useEffect(() => {
@@ -141,21 +140,21 @@ const UPLOAD_END = new Date('2025-11-02T23:59:59+07:00');
     return {
       type: 'info' as const,
       title: 'ยังไม่ถึงเวลาอัปโหลด / Upload Time Not Started',
-      message: `สามารถอัปโหลดได้ตั้งแต่ 31 ตุลาคม 2025 00:00 น. ถึง 2 พฤศจิกายน 2025 23:59 น. / Upload opens from Oct 31, 2025 00:00 to Nov 2, 2025 23:59`,
+      message: `สามารถอัปโหลดได้ตั้งแต่ 19 ตุลาคม 2026 00:00 น. ถึง 29 ตุลาคม 2026 23:59 น. / Upload opens from Oct 19, 2026 00:00 to Oct 29, 2026 23:59`,
       error: "ยังไม่ถึงเวลาอัปโหลด / Upload time hasn't started yet"
     };
   } else if (now > UPLOAD_END) {
     return {
       type: 'error' as const,
       title: 'หมดเวลาอัปโหลดแล้ว / Upload Time Has Ended',
-      message: `เวลาอัปโหลดสิ้นสุดลงแล้ว (2 พฤศจิกายน 2025 23:59 น.) / Upload time has ended (Nov 2, 2025 23:59)`,
+      message: `เวลาอัปโหลดสิ้นสุดลงแล้ว (29 ตุลาคม 2026 23:59 น.) / Upload time has ended (Oct 29, 2026 23:59)`,
       error: "หมดเวลาอัปโหลดแล้ว / Upload time has ended"
     };
   } else {
     return {
       type: 'success' as const,
       title: 'กำลังเปิดรับอัปโหลด! / Upload Time is Open!',
-      message: `อัปโหลดได้จนถึง 2 พฤศจิกายน 2025 23:59 น. / Upload until Nov 2, 2025 23:59`,
+      message: `อัปโหลดได้จนถึง 29 ตุลาคม 2026 23:59 น. / Upload until Oct 29, 2026 23:59`,
       error: ""
     };
   }
@@ -180,7 +179,7 @@ const UPLOAD_END = new Date('2025-11-02T23:59:59+07:00');
     }
 
     if (!costumeName.trim()) {
-      toast.error("กรุณากรอกชื่อชุด / Please enter costume name");
+      toast.error("กรุณากรอกชื่อผลงาน / Please enter entry name");
       return;
     }
 
@@ -218,7 +217,7 @@ const UPLOAD_END = new Date('2025-11-02T23:59:59+07:00');
 
         const timestamp = Date.now();
         const fileExtension = file.name.split('.').pop();
-        const fileName = `costume_${timestamp}.${fileExtension}`;
+        const fileName = `${category}_${timestamp}.${fileExtension}`;
         
         const mediaRef = ref(storage, `costumes/${user.uid}/${fileName}`);
         const snapshot = await uploadBytes(mediaRef, uploadFile);
@@ -234,6 +233,7 @@ const UPLOAD_END = new Date('2025-11-02T23:59:59+07:00');
         mediaUrl,
         mediaType,
         costumeName: costumeName.trim(),
+        category,
         position: position.trim(),
         description: description.trim(),
         uploadedAt: existingCostume?.uploadedAt || serverTimestamp(),
@@ -241,15 +241,16 @@ const UPLOAD_END = new Date('2025-11-02T23:59:59+07:00');
         voteCount: existingCostume?.voteCount || 0,
       };
 
-      await setDoc(doc(db, 'costumes', user.uid), costumeData);
+      const docId = existingCostume?.id ?? entryId(user.uid, category);
+      await setDoc(doc(db, 'costumes', docId), costumeData);
       
       const updatedCostume = {
         ...costumeData,
-        id: user.uid,
+        id: docId,
         uploadedAt: existingCostume?.uploadedAt || new Date(),
       } as unknown as Costume;
       
-      onCostumeUpdate(updatedCostume);
+      onCostumeUpdate(category, updatedCostume);
       toast.success("อัปโหลดสำเร็จแล้ว! / Upload successful!");
 
     } catch (error) {
@@ -269,7 +270,7 @@ const UPLOAD_END = new Date('2025-11-02T23:59:59+07:00');
 
     if (!existingCostume) return;
     
-    const confirmMessage = "คุณแน่ใจหรือไม่ว่าต้องการลบชุดของคุณ? / Are you sure you want to delete your costume?";
+    const confirmMessage = "คุณแน่ใจหรือไม่ว่าต้องการลบผลงานนี้? / Are you sure you want to delete this entry?";
     if (!window.confirm(confirmMessage)) return;
     
     setIsDeleting(true);
@@ -281,8 +282,8 @@ const UPLOAD_END = new Date('2025-11-02T23:59:59+07:00');
       }
       
       // ลบข้อมูลจาก firestore
-      await deleteDoc(doc(db, 'costumes', user.uid));
-      onCostumeUpdate(null);
+      await deleteDoc(doc(db, 'costumes', existingCostume.id));
+      onCostumeUpdate(category, null);
       
       // รีเซ็ตฟอร์ม
       setCostumeName('');
@@ -292,16 +293,16 @@ const UPLOAD_END = new Date('2025-11-02T23:59:59+07:00');
       setFile(null);
       setPreview(null);
       
-      toast.success("ลบชุดสำเร็จแล้ว! / Costume deleted successfully!");
+      toast.success("ลบผลงานสำเร็จแล้ว! / Entry deleted successfully!");
     } catch (error) {
       console.error("Error deleting costume:", error);
       // ถ้าลบไฟล์ไม่สำเร็จ แต่ลบ document สำเร็จ
       if (error instanceof Error && 'code' in error && error.code === 'storage/object-not-found') {
-        await deleteDoc(doc(db, 'costumes', user.uid));
-        onCostumeUpdate(null);
-        toast.success("ลบชุดสำเร็จแล้ว! / Costume deleted successfully!");
+        await deleteDoc(doc(db, 'costumes', existingCostume.id));
+        onCostumeUpdate(category, null);
+        toast.success("ลบผลงานสำเร็จแล้ว! / Entry deleted successfully!");
       } else {
-        toast.error("ลบชุดล้มเหลว / Failed to delete.");
+        toast.error("ลบผลงานล้มเหลว / Failed to delete.");
       }
     } finally {
       setIsDeleting(false);
@@ -314,7 +315,7 @@ const UPLOAD_END = new Date('2025-11-02T23:59:59+07:00');
   return (
     <div className="max-w-2xl mx-auto bg-black/50 backdrop-blur-md p-8 rounded-2xl border border-purple-500/50 shadow-lg shadow-purple-500/20">
       <h2 className="font-creepster text-5xl text-center text-orange-500 mb-6">
-        {existingCostume ? 'Edit Your Masterpiece' : 'Unveil Your Costume'}
+        {existingCostume ? 'Edit Your Masterpiece' : 'Unveil Your Entry'}
       </h2>
       
       {/* Time Status Banner */}
@@ -333,6 +334,38 @@ const UPLOAD_END = new Date('2025-11-02T23:59:59+07:00');
           <Clock className="h-4 w-4 mt-0.5 flex-shrink-0" />
           <p>{timeMessage.message}</p>
         </div>
+      </div>
+
+      {/* Category */}
+      <div className="mb-6">
+        <p className="block text-yellow-400 font-bold mb-2">Category *</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {CATEGORIES.map((c) => {
+            const hasEntry = existingCostumes.some((e) => categoryOf(e) === c.id);
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setCategory(c.id)}
+                disabled={isUploading || isDeleting}
+                className={`p-3 rounded-lg border text-left transition-all ${
+                  category === c.id
+                    ? 'border-orange-500 bg-orange-500/20'
+                    : 'border-purple-600 bg-purple-900/40 hover:border-orange-400'
+                }`}
+              >
+                <span className="text-2xl">{c.emoji}</span>
+                <span className="block font-semibold text-sm">{c.label}</span>
+                <span className="block text-xs text-gray-400">{c.labelTh}</span>
+                {hasEntry && <span className="block text-xs text-green-400 mt-1">✓ Submitted</span>}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-sm text-gray-300 mt-2">{categoryInfo.description}</p>
+        {categoryInfo.hint && (
+          <p className="text-sm text-yellow-300 mt-2 p-2 rounded bg-yellow-500/10 border border-yellow-500/30">{categoryInfo.hint}</p>
+        )}
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -400,7 +433,7 @@ const UPLOAD_END = new Date('2025-11-02T23:59:59+07:00');
           </div>
         </div>
 
-        {/* Costume Name */}
+        {/* {categoryInfo.entryName} */}
         <div className="mb-4">
           <label htmlFor="costumeName" className="block text-yellow-400 font-bold mb-2">
             Costume Name *

@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import type { Costume } from '../types';
+import { getCategoryInfo, categoryOf } from '../config';
 import { ThumbsUp, Flame, Check, X } from 'lucide-react';
 
 interface CostumeCardProps {
   costume: Costume;
-  onVote: (userId: string) => void;
+  onVote: (costume: Costume) => void;
   isOwnCostume: boolean;
   isVotedFor: boolean;
 }
 
 const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onVote, isOwnCostume, isVotedFor }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const categoryInfo = getCategoryInfo(categoryOf(costume));
 
   return (
     <>
@@ -23,7 +25,7 @@ const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onVote, isOwnCostume
       >
         {isOwnCostume && (
           <div className="absolute top-2 right-2 bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded-full z-10">
-            Your Costume
+            Your Entry
           </div>
         )}
         <div className="relative w-full h-80 rounded-lg overflow-hidden mb-4">
@@ -55,6 +57,7 @@ const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onVote, isOwnCostume
           </div>
         </div>
 
+        <p className="text-xs text-purple-300 mb-1">{categoryInfo.emoji} {categoryInfo.label}</p>
         <h3 className="font-creepster text-3xl text-orange-400 truncate">{costume.costumeName}</h3>
         {costume.position && (
           <p className="text-yellow-400 font-semibold text-sm mb-1">Position: {costume.position}</p>
@@ -74,7 +77,7 @@ const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onVote, isOwnCostume
           <button
             onClick={(e) => {
               e.stopPropagation(); // ไม่ให้ modal เปิดเวลา vote
-              onVote(costume.userId);
+              onVote(costume);
             }}
             disabled={isOwnCostume || isVotedFor}
             className={`px-5 py-2.5 rounded-lg font-semibold text-white transition-all duration-300 flex items-center justify-center
