@@ -4,7 +4,7 @@ import type { User } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import { signOut } from 'firebase/auth';
 // FIX: The 'Pumpkin' icon does not exist in lucide-react. Replaced it with the 'Ghost' icon to fit the Halloween theme.
-import { Crown, GalleryHorizontal, LogOut, Upload, Trophy, Ghost } from 'lucide-react';
+import { GalleryHorizontal, LogOut, Upload, Trophy, Ghost } from 'lucide-react';
 import { toast } from './Toast';
 
 interface NavbarProps {

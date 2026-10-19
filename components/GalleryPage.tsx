@@ -14,7 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import type { Costume, Vote, Category } from '../types';
-import { CATEGORIES, categoryOf, entryId, getCategoryInfo, VOTE_START, VOTE_END } from '../config';
+import { CATEGORIES, entryId, getCategoryInfo, VOTE_START, VOTE_END } from '../config';
 import CostumeCard from './CostumeCard';
 import { toast } from './Toast';
 
@@ -82,7 +82,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
       const votes: Partial<Record<Category, StoredVote>> = {};
       snapshot.docs.forEach((d) => {
         const vote = d.data() as Vote;
-        votes[categoryOf(vote)] = { ...vote, docId: d.id };
+        votes[vote.category] = { ...vote, docId: d.id };
       });
       setUserVotes(votes);
     });
@@ -103,7 +103,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
     }
 
     const currentUserId = currentUser.uid;
-    const targetCategory = categoryOf(target);
+    const targetCategory = target.category;
 
     if (currentUserId === target.userId) {
       toast.error("You cannot vote for yourself! 🎃");
@@ -196,7 +196,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
     );
   }
 
-  const visibleCostumes = costumes.filter((c) => categoryOf(c) === category);
+  const visibleCostumes = costumes.filter((c) => c.category === category);
   const categoryInfo = getCategoryInfo(category);
 
   return (
@@ -205,7 +205,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
 
       <div className="flex flex-wrap justify-center gap-2 mb-8">
         {CATEGORIES.map((c) => {
-          const count = costumes.filter((e) => categoryOf(e) === c.id).length;
+          const count = costumes.filter((e) => e.category === c.id).length;
           return (
             <button
               key={c.id}

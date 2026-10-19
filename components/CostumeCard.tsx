@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Costume } from '../types';
-import { getCategoryInfo, categoryOf } from '../config';
+import { getCategoryInfo } from '../config';
 import { ThumbsUp, Flame, Check, X } from 'lucide-react';
 
 interface CostumeCardProps {
@@ -12,7 +12,7 @@ interface CostumeCardProps {
 
 const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onVote, isOwnCostume, isVotedFor }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const categoryInfo = getCategoryInfo(categoryOf(costume));
+  const categoryInfo = getCategoryInfo(costume.category);
 
   return (
     <>

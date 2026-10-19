@@ -4,7 +4,7 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db, storage } from '../services/firebase';
 import type { Costume, Category } from '../types';
-import { CATEGORIES, categoryOf, entryId, getCategoryInfo, UPLOAD_START, UPLOAD_END } from '../config';
+import { CATEGORIES, entryId, getCategoryInfo, UPLOAD_START, UPLOAD_END } from '../config';
 import { UploadCloud, Trash2, Wand2, Clock, Calendar } from 'lucide-react';
 import { toast } from './Toast';
 
@@ -72,7 +72,7 @@ const compressImage = (file: File, maxSizeMB = 1): Promise<Blob> => {
 const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostumeUpdate }) => {
   const [category, setCategory] = useState<Category>('costume');
   const categoryInfo = getCategoryInfo(category);
-  const existingCostume = existingCostumes.find((c) => categoryOf(c) === category) ?? null;
+  const existingCostume = existingCostumes.find((c) => c.category === category) ?? null;
   const [costumeName, setCostumeName] = useState('');
   const [position, setPosition] = useState('');
   const [uploaderName, setUploaderName] = useState('');
@@ -341,7 +341,7 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostu
         <p className="block text-yellow-400 font-bold mb-2">Category *</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {CATEGORIES.map((c) => {
-            const hasEntry = existingCostumes.some((e) => categoryOf(e) === c.id);
+            const hasEntry = existingCostumes.some((e) => e.category === c.id);
             return (
               <button
                 key={c.id}

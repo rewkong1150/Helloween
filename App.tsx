@@ -4,7 +4,6 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { auth, db } from './services/firebase';
 import type { Costume, Category } from './types';
-import { categoryOf } from './config';
 
 import LoginPage from './components/LoginPage';
 import Navbar from './components/Navbar';
@@ -60,7 +59,7 @@ const App: React.FC = () => {
 
   const handleCostumeUpdate = (category: Category, costume: Costume | null) => {
     setUserCostumes((prev) => {
-      const others = prev.filter((c) => categoryOf(c) !== category);
+      const others = prev.filter((c) => c.category !== category);
       return costume ? [...others, costume] : others;
     });
     navigate('gallery');

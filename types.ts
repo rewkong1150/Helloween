@@ -13,8 +13,7 @@ export interface Costume {
   costumeName: string;
   position?: string;
   description: string;
-  // Entries created before categories existed have no category (treated as 'costume').
-  category?: Category;
+  category: Category;
   uploadedAt: Timestamp;
   voteCount: number;
 }
@@ -23,7 +22,6 @@ export interface Vote {
   voterId: string;
   // Id of the voted entry (costume document id).
   votedFor: string;
-  // Votes created before categories existed have no category (treated as 'costume').
-  category?: Category;
+  category: Category;
   votedAt: Timestamp;
 }

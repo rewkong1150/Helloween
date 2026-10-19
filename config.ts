@@ -38,7 +38,6 @@ export const CATEGORIES: CategoryInfo[] = [
   },
 ];
 
-export const categoryOf = (entry: { category?: Category }): Category => entry.category ?? 'costume';
 
 export const getCategoryInfo = (category: Category): CategoryInfo =>
   CATEGORIES.find((c) => c.id === category) ?? CATEGORIES[0];

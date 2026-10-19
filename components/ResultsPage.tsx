@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import type { Costume, Category } from '../types';
-import { CATEGORIES, categoryOf, getCategoryInfo, RESULTS_AT } from '../config';
+import { CATEGORIES, getCategoryInfo, RESULTS_AT } from '../config';
 import { Crown, Ghost } from 'lucide-react';
 
 const Media: React.FC<{ costume: Costume; className: string }> = ({ costume, className }) =>
@@ -112,7 +112,7 @@ const ResultsPage: React.FC = () => {
       return <div className="text-center text-2xl font-creepster text-orange-500 animate-pulse">กำลังคำนวณผลการแข่งขัน...</div>;
   }
 
-  const inCategory = costumes.filter((c) => categoryOf(c) === category);
+  const inCategory = costumes.filter((c) => c.category === category);
   const totalVotes = inCategory.reduce((sum, costume) => sum + costume.voteCount, 0);
   const topThree = inCategory.slice(0, 3);
   const rest = inCategory.slice(3);
