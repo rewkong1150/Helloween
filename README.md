@@ -39,3 +39,10 @@ Vote totals are hidden by the server until results open.
 The gallery shows ~25 KB thumbnails (a still frame for videos) and only loads the full file when an entry is
 opened; uploads are cached for a year. That keeps a few hundred people comfortably inside Supabase's free
 limits (1 GB storage, 5 GB + 5 GB cached downloads per month). Videos are the main storage cost, hence the 20 MB cap.
+
+## Testing the rules
+
+[supabase/test-rules.sql](supabase/test-rules.sql) simulates six users and checks uploads, votes (one per category,
+changeable), the company-only gate, result hiding and the edit locks (39 checks). It temporarily swaps the
+schedule functions, so **run it only in a throwaway test project**, never the live one. It rolls itself back and
+ends with an error that carries the PASS/FAIL report.
