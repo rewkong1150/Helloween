@@ -55,7 +55,7 @@ export const isAllowedEmail = (email: string) => {
 // Schedule (Thailand time, GMT+7). Keep in sync with upload_open()/voting_open()/results_open()
 // in supabase/schema.sql, which is what actually enforces it.
 export const UPLOAD_START = new Date('2026-10-19T00:00:00+07:00');
-export const UPLOAD_END = new Date('2026-10-29T23:59:59+07:00');
-export const VOTE_START = new Date('2026-10-30T00:00:00+07:00');
-export const VOTE_END = new Date('2026-10-30T23:59:59+07:00');
-export const RESULTS_AT = new Date('2026-10-31T00:00:00+07:00');
+export const UPLOAD_END = new Date('2026-10-30T18:00:00+07:00');
+export const VOTE_START = new Date('2026-10-30T18:00:00+07:00');
+export const VOTE_END = new Date('2026-10-31T18:00:00+07:00');
+export const RESULTS_AT = new Date('2026-10-31T18:00:00+07:00');

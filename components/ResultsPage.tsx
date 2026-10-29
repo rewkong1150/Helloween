@@ -230,7 +230,7 @@ const ResultsPage: React.FC = () => {
         <Ghost className="mx-auto h-24 w-24 text-purple-400 animate-bounce" />
         <h2 className="text-4xl font-display text-yellow-400 mt-4">Announcement of results in:</h2>
         <p className="mt-4 text-5xl font-bold text-orange-500">{formatTime(timeLeft)}</p>
-        <p className="mt-2 text-lg text-gray-300">Results will be announced after voting closes on October 30, 2026 🎃</p>
+        <p className="mt-2 text-lg text-gray-300">Results will be announced after voting closes on October 31, 2026 at 18:00 🎃</p>
       </div>
     );
   }

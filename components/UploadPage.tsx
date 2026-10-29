@@ -188,21 +188,21 @@ const UploadPage: React.FC<UploadPageProps> = ({ user, existingCostumes, onCostu
     return {
       type: 'info' as const,
       title: 'ยังไม่ถึงเวลาอัปโหลด / Upload Time Not Started',
-      message: `สามารถอัปโหลดได้ตั้งแต่ 19 ตุลาคม 2026 00:00 น. ถึง 29 ตุลาคม 2026 23:59 น. / Upload opens from Oct 19, 2026 00:00 to Oct 29, 2026 23:59`,
+      message: `สามารถอัปโหลดได้ตั้งแต่ 19 ตุลาคม 2026 00:00 น. ถึง 30 ตุลาคม 2026 18:00 น. / Upload opens from Oct 19, 2026 00:00 to Oct 30, 2026 18:00`,
       error: "ยังไม่ถึงเวลาอัปโหลด / Upload time hasn't started yet"
     };
   } else if (now > UPLOAD_END) {
     return {
       type: 'error' as const,
       title: 'หมดเวลาอัปโหลดแล้ว / Upload Time Has Ended',
-      message: `เวลาอัปโหลดสิ้นสุดลงแล้ว (29 ตุลาคม 2026 23:59 น.) / Upload time has ended (Oct 29, 2026 23:59)`,
+      message: `เวลาอัปโหลดสิ้นสุดลงแล้ว (30 ตุลาคม 2026 18:00 น.) / Upload time has ended (Oct 30, 2026 18:00)`,
       error: "หมดเวลาอัปโหลดแล้ว / Upload time has ended"
     };
   } else {
     return {
       type: 'success' as const,
       title: 'กำลังเปิดรับอัปโหลด! / Upload Time is Open!',
-      message: `อัปโหลดได้จนถึง 29 ตุลาคม 2026 23:59 น. / Upload until Oct 29, 2026 23:59`,
+      message: `อัปโหลดได้จนถึง 30 ตุลาคม 2026 18:00 น. / Upload until Oct 30, 2026 18:00`,
       error: ""
     };
   }

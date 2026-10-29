@@ -18,13 +18,13 @@ select
       and pg_get_functiondef('public.cast_vote'::regproc) like '%voting_open%'
       and pg_get_functiondef('public.cast_vote'::regproc) like '%cannot vote for yourself%') as cast_vote_ok,
   (select pg_get_functiondef('public.get_results'::regproc) like '%results_open() and public.is_company_user()%') as results_gated,
-  (select pg_get_functiondef('public.voting_open'::regproc) like '%2026-10-30 00:00:00+07%'
-      and pg_get_functiondef('public.voting_open'::regproc) like '%2026-10-30 23:59:59+07%'
+  (select pg_get_functiondef('public.voting_open'::regproc) like '%2026-10-30 18:00:00+07%'
+      and pg_get_functiondef('public.voting_open'::regproc) like '%2026-10-31 18:00:00+07%'
       and pg_get_functiondef('public.voting_open'::regproc) not like '%@%') as voting_window_ok,
-  (select pg_get_functiondef('public.results_open'::regproc) like '%2026-10-31 00:00:00+07%'
+  (select pg_get_functiondef('public.results_open'::regproc) like '%2026-10-31 18:00:00+07%'
       and pg_get_functiondef('public.results_open'::regproc) not like '%@%') as results_window_ok,
   (select pg_get_functiondef('public.upload_open'::regproc) like '%2026-10-19 00:00:00+07%'
-      and pg_get_functiondef('public.upload_open'::regproc) like '%2026-10-29 23:59:59+07%') as upload_window_ok,
+      and pg_get_functiondef('public.upload_open'::regproc) like '%2026-10-30 18:00:00+07%') as upload_window_ok,
   -- counts only
   (select count(*) from public.entries) as entries_total,
   (select string_agg(category || '=' || n, ', ' order by category) from (select category, count(*) n from public.entries group by category) t) as entries_by_category,

@@ -111,7 +111,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
     if (!canVote) {
       const now = new Date();
       if (now < VOTE_START) {
-        toast.error('Voting will start on October 30, 2026! 🎃');
+        toast.error('Voting will start on October 30, 2026 at 18:00! 🎃');
       } else if (now > VOTE_END) {
         toast.error('Voting period has ended! Thank you for participating! 👻');
       }
@@ -148,7 +148,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
         <div className="text-center mb-8 p-4 bg-orange-900/40 rounded-lg border border-orange-700">
           <h3 className="text-xl font-display text-orange-400">Voting Starts Soon!</h3>
           <p className="text-gray-300 mt-2">
-            Voting opens on October 30, 2026 — one vote in each of the 3 categories 🏆
+            Voting opens on October 30, 2026 at 18:00 — one vote in each of the 3 categories 🏆
           </p>
         </div>
       );
@@ -166,7 +166,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ currentUser }) => {
       <div className="text-center mb-8 p-4 bg-green-900/50 rounded-lg border border-green-700">
         <h3 className="text-xl font-display text-green-400">Voting is Live! 🎃</h3>
         <p className="text-gray-300 mt-2">
-          Cast your vote now — one vote per category! Voting ends October 30 at 23:59
+          Cast your vote now — one vote per category! Voting ends October 31 at 18:00
         </p>
       </div>
     );

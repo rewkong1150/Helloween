@@ -32,6 +32,8 @@ Project: `Helloween` (`paxsksbabtoznakdbxcb`). Do these in the Supabase dashboar
 
 Defined in [config.ts](config.ts) for the UI and in `upload_open()`, `voting_open()`, `results_open()` in
 [supabase/schema.sql](supabase/schema.sql), which is what the server enforces. Change both together.
+Current schedule (Thailand time): uploads 19 Oct 00:00 – 30 Oct 18:00, voting 30 Oct 18:00 – 31 Oct 18:00, results from 31 Oct 18:00.
+Current schedule (Thailand time): uploads 19 Oct 00:00 – 30 Oct 18:00, voting 30 Oct 18:00 – 31 Oct 18:00, results from 31 Oct 18:00.
 Vote totals are hidden by the server until results open.
 
 ## Free-plan capacity

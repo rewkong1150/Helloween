@@ -60,9 +60,9 @@ begin
     (ec, c, 'costume', 'C', 'C costume', 'u', 'p', 'image'),
     (ed, d, 'pet',     'D', 'D pet',     'u', 'p', 'image');
 
-  -- 1. voting is closed on the real schedule (it opens on the 30th)
+  -- 1. voting is closed on the real schedule (it opens on the 30th at 18:00)
   perform public.tt_as_auth(a, 'alice@villacartegroup.com');
-  r := r || public.tt_line('vote before the 30th is refused', public.tt_try(format('select public.cast_vote(%L)', eb)), 'Voting is not open');
+  r := r || public.tt_line('vote before the 30th 18:00 is refused', public.tt_try(format('select public.cast_vote(%L)', eb)), 'Voting is not open');
   r := r || public.tt_line('results hidden before the end', public.tt_val('select count(*) from public.get_results()'), '0');
 
   -- simulate the voting day (test project only)

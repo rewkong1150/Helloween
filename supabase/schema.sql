@@ -4,13 +4,13 @@
 -- ---------------------------------------------------------------- schedule
 -- Thailand time (GMT+7). Keep in sync with config.ts.
 create or replace function public.upload_open() returns boolean language sql stable as $$
-  select now() between timestamptz '2026-10-19 00:00:00+07' and timestamptz '2026-10-29 23:59:59+07'
+  select now() between timestamptz '2026-10-19 00:00:00+07' and timestamptz '2026-10-30 18:00:00+07'
 $$;
 create or replace function public.voting_open() returns boolean language sql stable as $$
-  select now() between timestamptz '2026-10-30 00:00:00+07' and timestamptz '2026-10-30 23:59:59+07'
+  select now() between timestamptz '2026-10-30 18:00:00+07' and timestamptz '2026-10-31 18:00:00+07'
 $$;
 create or replace function public.results_open() returns boolean language sql stable as $$
-  select now() >= timestamptz '2026-10-31 00:00:00+07'
+  select now() >= timestamptz '2026-10-31 18:00:00+07'
 $$;
 
 -- ------------------------------------------------------------------ tables
