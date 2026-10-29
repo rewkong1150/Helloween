@@ -6,8 +6,14 @@ import type { Costume, Category } from '../types';
 import { CATEGORIES, getCategoryInfo, RESULTS_AT } from '../config';
 import { Crown, Ghost } from 'lucide-react';
 
-// Development-only preview with made-up data (?mockresults). Stripped from production builds.
-const MOCK = import.meta.env.DEV && new URLSearchParams(window.location.search).has('mockresults');
+// Development-only previews (stripped from production builds):
+//   ?mockresults       made-up entries and votes
+//   ?mockresults=real  the real entries (read-only SELECT, sign in first) with made-up votes
+const MOCK_MODE = import.meta.env.DEV ? new URLSearchParams(window.location.search).get('mockresults') : null;
+const MOCK = MOCK_MODE !== null;
+const MOCK_REAL = MOCK_MODE === 'real';
+// Per category, in upload order: a tie for first, then third, fourth, none.
+const MOCK_VOTE_PATTERN = [5, 5, 3, 1, 0];
 const mockEntry = (id: string, category: Category, name: string, by: string, votes: number): Costume => ({
   id,
   userId: id,
@@ -42,10 +48,19 @@ const Media: React.FC<{ costume: Costume; className: string }> = ({ costume, cla
     <img src={costume.thumbUrl ?? costume.mediaUrl} alt={costume.costumeName} loading="lazy" decoding="async" className={className} />
   );
 
+// Winners stand on the podium as their full contest entry (not a cropped thumbnail).
+// Only the top places load the full file, so this adds at most a handful of images per category.
+const FullMedia: React.FC<{ costume: Costume; className: string }> = ({ costume, className }) =>
+  costume.mediaType === 'video' ? (
+    <video src={costume.mediaUrl} poster={costume.thumbUrl ?? undefined} controls preload="metadata" playsInline className={className} />
+  ) : (
+    <img src={costume.mediaUrl} alt={costume.costumeName} decoding="async" className={className} />
+  );
+
 const podiumStyles = [
-  { height: 'h-64', color: 'bg-yellow-400', textColor: 'text-yellow-400', borderColor: 'border-yellow-400', emoji: '🥇' },
-  { height: 'h-56', color: 'bg-gray-300', textColor: 'text-gray-300', borderColor: 'border-gray-300', emoji: '🥈' },
-  { height: 'h-48', color: 'bg-yellow-600', textColor: 'text-yellow-600', borderColor: 'border-yellow-600', emoji: '🥉' },
+  { block: 'h-52', color: 'bg-yellow-400', border: 'border-yellow-400', emoji: '🥇', label: '1st' },
+  { block: 'h-44', color: 'bg-gray-300', border: 'border-gray-300', emoji: '🥈', label: '2nd' },
+  { block: 'h-36', color: 'bg-yellow-600', border: 'border-yellow-600', emoji: '🥉', label: '3rd' },
 ];
 
 const TieBadge: React.FC = () => (
@@ -58,18 +73,23 @@ const PodiumItem: React.FC<{ item: Ranked<Costume> }> = ({ item }) => {
   const { entry: costume, rank, tied } = item;
   const style = podiumStyles[rank - 1];
   return (
-    <div className="flex flex-col items-center">
-      <div className="relative">
-        <Media costume={costume} className={`w-32 h-32 rounded-full object-cover border-4 ${style.borderColor} shadow-lg`} />
-        <div className="absolute -top-4 -left-4 text-4xl transform -rotate-12">{style.emoji}</div>
+    <div className="flex flex-col items-center w-44 md:w-60">
+      {/* The contest entry itself, standing on top of its podium block */}
+      <div className="relative w-full">
+        <FullMedia
+          costume={costume}
+          className={`block w-full max-h-72 object-contain bg-black/50 rounded-t-xl border-4 border-b-0 ${style.border} shadow-xl`}
+        />
+        <div className="absolute -top-3 -left-3 text-4xl transform -rotate-12 drop-shadow-lg">{style.emoji}</div>
       </div>
-      <div className="text-center mt-2">
-        <p className="font-bold text-white truncate w-36">{costume.costumeName}</p>
-        <p className={`text-sm ${style.textColor}`}>{costume.uploaderName || costume.userName}</p>
-        {tied && <TieBadge />}
-      </div>
-      <div className={`flex items-center justify-center w-full mt-2 rounded-t-lg ${style.color} ${style.height}`}>
-        <span className="text-4xl font-bold text-black">{costume.voteCount ?? 0}</span>
+      <div className={`w-full ${style.block} ${style.color} flex flex-col items-center justify-start px-2 pt-2 text-black`}>
+        <span className="text-4xl font-bold leading-none">{costume.voteCount ?? 0}</span>
+        <span className="text-xs font-semibold uppercase tracking-wide opacity-70">votes</span>
+        <p className="font-bold truncate w-full text-center mt-1">{costume.costumeName}</p>
+        <p className="text-sm truncate w-full text-center opacity-80">{costume.uploaderName || costume.userName}</p>
+        {tied && (
+          <span className="mt-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-900 text-purple-100">เสมอ / Tie</span>
+        )}
       </div>
     </div>
   );
@@ -133,7 +153,7 @@ const CategorySection: React.FC<{ category: Category; costumes: Costume[] }> = (
         </div>
       ) : (
         <>
-          <div className="flex justify-center items-end gap-4 md:gap-8 mb-10 p-4 bg-black/30 rounded-xl flex-wrap">
+          <div className="flex justify-center items-end gap-3 md:gap-6 mb-10 p-4 pb-0 bg-black/30 rounded-xl flex-wrap">
             {podium.map((item) => (
               <PodiumItem key={item.entry.id} item={item} />
             ))}
@@ -149,8 +169,8 @@ const CategorySection: React.FC<{ category: Category; costumes: Costume[] }> = (
 
 // ResultsPage with countdown
 const ResultsPage: React.FC = () => {
-  const [costumes, setCostumes] = useState<Costume[]>(MOCK ? MOCK_ENTRIES : []);
-  const [loading, setLoading] = useState(!MOCK);
+  const [costumes, setCostumes] = useState<Costume[]>(MOCK && !MOCK_REAL ? MOCK_ENTRIES : []);
+  const [loading, setLoading] = useState(!MOCK || MOCK_REAL);
   const [timeLeft, setTimeLeft] = useState<number>(0);
 
   useEffect(() => {
@@ -165,12 +185,12 @@ const ResultsPage: React.FC = () => {
 
   // Totals are only released by the server once results open.
   useEffect(() => {
-    if (MOCK || timeLeft > 0) return;
+    if ((MOCK && !MOCK_REAL) || timeLeft > 0) return;
     let cancelled = false;
     (async () => {
       const [entriesRes, resultsRes] = await Promise.all([
-        supabase.from('entries').select('*'),
-        supabase.rpc('get_results'),
+        supabase.from('entries').select('*').order('created_at', { ascending: true }),
+        MOCK_REAL ? Promise.resolve({ data: [], error: null }) : supabase.rpc('get_results'),
       ]);
       if (entriesRes.error || resultsRes.error) {
         console.error('Error fetching results:', entriesRes.error ?? resultsRes.error);
@@ -178,7 +198,13 @@ const ResultsPage: React.FC = () => {
       const counts = new Map<string, number>(
         ((resultsRes.data ?? []) as { entry_id: string; vote_count: number }[]).map((r) => [r.entry_id, Number(r.vote_count)])
       );
-      const list = ((entriesRes.data ?? []) as EntryRow[]).map((row) => rowToCostume(row, counts.get(row.id) ?? 0));
+      const perCategory: Partial<Record<Category, number>> = {};
+      const list = ((entriesRes.data ?? []) as EntryRow[]).map((row) => {
+        if (!MOCK_REAL) return rowToCostume(row, counts.get(row.id) ?? 0);
+        const i = perCategory[row.category] ?? 0;
+        perCategory[row.category] = i + 1;
+        return rowToCostume(row, MOCK_VOTE_PATTERN[i] ?? 0);
+      });
       if (!cancelled) {
         setCostumes(list);
         setLoading(false);
