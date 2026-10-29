@@ -72,6 +72,18 @@ const App: React.FC = () => {
     navigate('gallery');
   };
 
+  // Development-only: preview the results page with made-up data and no sign-in (?mockresults).
+  if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('mockresults')) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-orange-900 via-purple-900 to-black text-white">
+        <FloatingGhosts />
+        <main className="relative z-10 container mx-auto px-4 py-8">
+          <ResultsPage />
+        </main>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
